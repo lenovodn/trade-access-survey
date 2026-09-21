@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light">
+  <title>Linkincrease · Access experience worksheet</title>
+  <link rel="icon" href="data:,">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./config.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" id="skip-link" href="#worksheet-heading">Review worksheet</a>
+  <header class="toolbar">
+    <div class="toolbar-inner">
+      <a class="brand" href="#title" aria-label="Linkincrease"><span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i></span>Linkincrease<span class="brand-divider" aria-hidden="true">/</span><span class="brand-ab" aria-hidden="true">A:B</span></a>
+      <span class="header-note" id="header-note">Read-only test · No login here</span>
+      <div class="toolbar-actions">
+        <button class="button ghost" id="clear" type="button">Clear answers</button>
+        <button class="button language" id="language" type="button" lang="zh-CN">中文</button>
+      </div>
+    </div>
+  </header>
+  <main id="main" class="workspace" tabindex="-1">
+    <div class="page-heading">
+      <h1 id="title">Access experience worksheet</h1>
+      <p id="intro">Complete the entire A column first, then repeat in B. Compare your answers on this page.</p>
+    </div>
+    <noscript><p class="setup-warning">JavaScript is needed to save and validate this worksheet. No data will be submitted without it.</p></noscript>
+    <p id="setup-warning" class="setup-warning" hidden></p>
+    <section class="progress-band" id="progress-band" aria-labelledby="progress-label">
+      <div class="completion">
+        <div class="completion-text"><strong id="progress-label"></strong><span id="rating-progress"></span></div>
+        <div class="progress-track" id="progress-track" role="progressbar" aria-labelledby="progress-label" aria-valuemin="0" aria-valuemax="17" aria-valuenow="0"><span id="progress-fill"></span></div>
+      </div>
+      <div class="top-jumps" id="top-jumps"></div>
+    </section>
+    <div id="content"></div>
+    <p id="draft-status" class="draft-status"></p>
+  </main>
+  <footer class="action-bar" id="action-bar">
+    <div class="action-bar-inner">
+      <p id="feedback" class="feedback" role="status" aria-live="polite" aria-atomic="true" tabindex="-1" hidden></p>
+      <div class="action-row">
+        <strong id="footer-progress" class="footer-progress"></strong>
+        <div id="footer-jumps"></div>
+        <div class="actions" id="actions"></div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>
