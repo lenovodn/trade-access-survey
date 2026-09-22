@@ -1,6 +1,6 @@
 window.SURVEY_CONFIG = Object.freeze({
   endpoint: '',
-  surveyId: 'trade-access-feedback-v1',
+  surveyId: 'trade-access-feedback-v4',
   defaultLanguage: 'en',
   flowSpace: 'TFG S&E Audit',
   orderNumber: '',
@@ -15,6 +15,7 @@ window.SURVEY_CONFIG = Object.freeze({
     login: '',
     flowspace: '',
     orders: '',
-    detail: ''
+    detail: '',
+    workOrder: ''
   }
 });

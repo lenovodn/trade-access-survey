@@ -1,453 +1,808 @@
 (() => {
   'use strict';
-  const cfg = window.SURVEY_CONFIG;
-  const $ = (id) => document.getElementById(id);
-  const messages = {
+
+  const cfg = window.SURVEY_CONFIG || {};
+  const STORAGE_KEY = `${cfg.surveyId || 'trade-access-feedback-v2'}:draft`;
+  const REVIEW_MODE = new URLSearchParams(window.location.search).get('review') === '1';
+  const SIMULATE_MISSING_DETECTION = REVIEW_MODE && new URLSearchParams(window.location.search).get('simulateDetection') === 'missing';
+
+  const TEXT = {
     en: {
-      title: 'A better experience, together.', intro: 'Help us compare two access routes. Follow the guide, try each step, and tell us how it feels. No stopwatch needed.',
-      navEyebrow: 'YOUR FEEDBACK MATTERS', navTitle: 'A little test.\nA big difference.', navDescription: 'The same workspace. Two access routes. Your real experience.',
-      nav: ['Getting ready', 'Test route A', 'Test route B', 'Compare & submit'], navSub: ['A few details about you', 'Try it, then rate it', 'Repeat the same steps', 'Share your experience'],
-      sidebar: 'Keep this guide open. The business system opens in a separate tab; come back here after each step.', headerNote: 'Read-only test · No login here',
-      setup: 'Template preview — the submission API is not configured. You can fill in and download answers; nothing will be sent.',
-      missing: 'Setup incomplete: the organizer still needs to provide {fields}. You can preview this form, but online submission is disabled.',
-      configLabels: { contact: 'a feedback contact', orderNumber: 'the order number', privacy: 'the data notice', exit: 'the page-exit instruction' },
-      details: 'Your testing details', required: '* Required', tester: 'Your name / test identifier', testerHint: 'Use the identifier provided by your organizer, or your name.', location: 'Country and city', locationHint: 'Country, city — no street address',
-      browser: 'Browser', device: 'Device', network: 'Network', vpn: 'VPN or proxy', choose: 'Select an option',
-      browserOpts: ['Google Chrome', 'Microsoft Edge', 'Mozilla Firefox', 'Apple Safari', 'Other / not sure'],
-      deviceOpts: ['Windows computer', 'macOS computer', 'Android', 'iPhone / iPad', 'Other'],
-      networkOpts: ['Company network', 'Home network', 'Mobile hotspot', 'Other', 'Not sure'], vpnOpts: ['Enabled', 'Disabled', 'Not sure'],
-      sameEnvironment: 'Keep it consistent.', environmentText: 'Use the same account, browser, device and network for both routes. Keep your usual VPN settings. Do not clear caches, repeatedly refresh, or change business data.',
-      first: 'FIRST', second: 'SECOND', readyAction: 'Start with route A', back: 'Back', next: 'Next step', review: 'Compare both routes', download: 'Download answers (JSON)', submit: 'Submit feedback', submitting: 'Submitting…',
-      draft: 'Answers are saved temporarily in this tab and cleared after confirmed submission. On a shared device, use “Clear answers” when finished.', noStorage: 'Tab storage unavailable. Keep this page open; a refresh may lose answers.', clear: 'Clear answers', clearConfirm: 'Clear all answers in this tab and start again?',
-      rated: '{count} of 8 steps rated', route: 'ROUTE {route}', step: 'STEP {step} OF 4', optional: 'OPTIONAL',
-      steps: ['Sign in & enter your FlowSpace', 'Open the order list', 'Search for & open the order', 'Open a work order'],
-      stepIntro: 'Complete the action in the business-system tab, then return here to rate this step.',
-      instructions: [
-        'Open route {route} and sign in with your authorized account. Choose {flow}. When the workspace name and navigation appear, rate this step below.',
-        'Open the order list and wait for order records to appear. Look out for prolonged loading, a blank screen or an error. You do not need developer tools.',
-        'Search for order {order}, then open its details. Wait for the basic information and milestone area. Use the same order for both routes.',
-        'If convenient, open an accessible work order from the order’s milestones and wait for the form. Use the same work order in both routes where possible. Do not save, submit, approve, delete, or send emails.'
+      headerNote: 'Thank you for helping us',
+      navEyebrow: 'Guided test',
+      navTitle: 'Compare two routes',
+      navDescription: 'Follow the four stages in order. Your progress is saved on this device.',
+      sidebarNote: 'Use the same device, browser, account and network for both routes.',
+      stages: [
+        ['Prepare', 'About 1 min'],
+        ['Route A', 'Test first'],
+        ['Route B', 'Test second'],
+        ['Compare & send', 'About 2 min']
       ],
-      orderUnknown: 'specified by your organizer (not yet configured)', openRoute: 'Open route {route}', newTab: 'Opens in a separate tab · return here to rate',
-      figure: ['Sign-in screen', 'Choose your FlowSpace', 'Order list', 'Order details'], diagram: 'Illustration only — replace with a reviewed, redacted screenshot before release.', screenshot: 'Guide screenshot', imageFailed: 'Screenshot unavailable. Follow the written instructions.',
-      rate: 'How did this step feel?', rateHelp: 'Choose one answer based on your experience — no timing required.',
-      ratings: ['Smooth', 'Some waiting', 'Noticeably slow, but completed', 'Could not complete / could not continue', 'Not attempted'],
-      rateNote: 'If a previous step blocked you, choose “Not attempted”. Partial results are still useful.', skip: 'Mark remaining steps “Not attempted”', skipHint: 'Only unanswered steps in this route will be marked; existing ratings will be kept.', skipWork: 'Skip the optional work order',
-      exploreTitle: 'Anything else you would like to explore?', exploreIntro: 'The guided steps are done. You may now browse other pages you can access, or skip this section.',
-      exploreRules: 'You can view other orders, milestones and work orders, switch menus, search, filter and turn pages. Stay read-only: do not create, edit, delete, submit, approve or send anything.',
-      browseQuestion: 'Q15 · What else did you explore? (optional, select any)', browseOpts: ['Other orders', 'Other work orders / milestones', 'Filters / pagination', 'Other menus', 'I did not explore other pages'],
-      notes: 'Q16 · Anything to add? (optional)', notesHint: 'For example: route B, search kept loading. Please do not include passwords or confidential customer data.',
-      problemTitle: 'If something goes wrong', problems: ['Do not repeatedly refresh or bypass certificate warnings. Stop the step if you cannot continue.', 'If an order is missing or you lack access, contact the organizer; do not substitute another order in the guided comparison.', 'Do not share passwords, cookies, verification codes, access tokens or network captures. Redact personal and business data in screenshots.'],
-      contact: 'Contact', contactUnknown: 'The organizer has not provided a contact yet.', exitTitle: 'Before leaving this route', exitUnknown: 'The organizer must confirm the page-exit / reporting rule before release. Loading a page is not proof that performance data was saved.',
-      toB: 'Continue with route B', compareTitle: 'Two routes. What did you notice?', compareIntro: 'Review your ratings, then share your overall impression. You can go back and change any answer before submitting.',
-      q11: 'Q11 · Which route felt faster overall?', fasterOpts: ['Route A', 'Route B', 'No noticeable difference', 'Cannot judge / did not finish both routes'],
-      q12: 'Q12 · Where was the speed difference most noticeable?', diffOpts: ['Sign-in / FlowSpace', 'Order list', 'Search', 'Order details', 'Work order', 'No noticeable difference', 'Cannot judge'],
-      multiHelp: 'Select all that apply. “No difference” and “Cannot judge” cannot be combined with other choices.',
-      q13: 'Q13 · Which route had a problem?', errorRouteOpts: ['No problems in either route', 'Route A only', 'Route B only', 'Both routes', 'Cannot judge / not tested'],
-      q14: 'Q14 · What problems occurred?', errorTypeOpts: ['Persistent loading / blank page', 'Error message', 'Could not sign in or open the page', 'Missing order / insufficient access', 'Other'],
-      privacyTitle: 'About your feedback', privacyUnknown: 'The organizer has not yet provided the confirmed data-use and retention notice. This must be completed before online collection.',
-      formScope: 'This survey sends your identifier, country/city, selected environment details and answers. It does not read your business-system account, cookies or page timings. Server receipt time is recorded by the backend.',
-      localOnly: 'No API is configured. Download a JSON copy to inspect the request structure or share it with the organizer. Downloading does not submit anything.',
-      fieldError: 'Please complete the required field: {field}.', rateError: 'Please rate this step or choose “Not attempted”.', compareError: 'Please answer {field}.',
-      incomplete: 'Some route ratings are missing. Returning to the first unanswered step; choose “Not attempted” if it was skipped.',
-      requestFailed: 'Submission was not confirmed. Your answers remain here. Check your connection or contact the organizer. A retry uses the same submission identifier.',
-      timeout: 'The request timed out; the server may or may not have saved it. Your answers remain here. Retry with the same identifier or contact the organizer.',
-      endpointError: 'The endpoint must be a valid HTTPS URL (HTTP is allowed only on localhost for testing).',
-      successTitle: 'Thank you for helping us improve.', successIntro: 'The server confirmed your feedback was saved. You may close this page.', successId: 'Submission identifier',
-      untitled: 'Not yet answered', downloadSuccess: 'JSON exported. No data was submitted.', reset: 'Start a new response',
-      questions: 'Testing guide', stepResult: 'Step {step}', optionalSkip: 'Not attempted (optional)', loading: 'Waiting for server confirmation…'
+      stage: 'Stage',
+      rated: 'rated steps',
+      clear: 'Clear draft',
+      saved: 'Draft saved on this device',
+      previewWarningTitle: 'Prototype mode',
+      previewWarning: 'The form is ready for review, but it will not send data until the release settings are completed.',
+      missing: 'Still needed before release:',
+      missingLabels: {
+        endpoint: 'submission API', orderNumber: 'test order number', contact: 'feedback contact',
+        privacyNotice: 'data collection notice', pageExitInstruction: 'page exit / waiting rule', screenshots: 'redacted guide screenshots'
+      },
+      setupTitle: 'Compare two Linkincrease routes and help us find the faster one',
+      setupIntro: 'Complete the same four actions on Route A and Route B. It takes about 5 minutes, and your overall impression is enough.',
+      goalLabel: 'Test goal',
+      sameActions: 'Same 4 actions',
+      chooseFaster: 'Choose the faster route',
+      routeA: 'Route A',
+      routeB: 'Route B',
+      routeHints: ['Test this first', 'Test this second'],
+      howTitle: 'Three simple steps',
+      how: [
+        ['Check your setup', 'Confirm the detected details and add your city.'],
+        ['Test A, then B', 'Open each route once and follow the four highlighted actions.'],
+        ['Share your feeling', 'Choose which route felt faster and submit your feedback.']
+      ],
+      infoTitle: 'Your test setup',
+      tester: 'Name or tester ID',
+      optional: 'Optional',
+      testerPlaceholder: 'e.g. SA-01',
+      location: 'City / region',
+      locationPlaceholder: 'e.g. Johannesburg',
+      locationCountry: 'Country / city',
+      locationCountryPlaceholder: 'e.g. Johannesburg, South Africa',
+      browser: 'Browser',
+      device: 'Device',
+      network: 'Network connection',
+      vpn: 'VPN / proxy',
+      country: 'Country',
+      timezone: 'Time zone',
+      autoTitle: 'Environment details',
+      autoHelpComplete: 'These details were detected automatically.',
+      autoHelpMissing: 'Some details could not be detected. Please add only the missing items below.',
+      notDetected: 'Not detected',
+      optionalField: 'Optional — answer only if you know',
+      choose: 'Select one',
+      browsers: ['Chrome', 'Microsoft Edge', 'Safari', 'Firefox', 'Other'],
+      devices: ['Windows computer', 'Mac computer', 'iPhone / iPad', 'Android phone / tablet', 'Other'],
+      networks: ['Office Wi-Fi / LAN', 'Home Wi-Fi / LAN', 'Mobile data / hotspot', 'Other'],
+      vpns: ['Not used', 'Used', 'Not sure'],
+      consistencyTitle: 'Keep the comparison fair',
+      consistency: ['Use the same device and browser', 'Use the same account and network', 'Do not change VPN settings', 'Do not clear cache or repeatedly refresh', 'Do not test both routes at the same time'],
+      start: 'Start with Route A',
+      routeTitle: 'Test {route}',
+      routeIntro: 'Open {route} once, complete all four actions in the new tab, then return here to rate them.',
+      openRoute: 'Open {route}',
+      opensNew: 'Opens in a new tab',
+      flowspace: 'Workspace',
+      order: 'Test order',
+      notConfigured: 'To be confirmed',
+      routeSafetyTitle: 'One quick reminder',
+      routeSafety: 'Test Route A first, then Route B. Keep the same device and network, and do not open both routes at the same time.',
+      guideLabel: 'Screen hint',
+      guideCaption: 'The blue outline shows where to click',
+      visualLogin: 'Log in',
+      visualWorkspace: 'Open workspace',
+      visualOrderList: 'Order list',
+      visualChooseOrder: 'Choose an order',
+      visualSameOrder: 'Search the same order',
+      visualWorkOrder: 'Work order',
+      visualClick: 'Click',
+      actionLabel: 'Do this',
+      required: 'Required',
+      stepOptional: 'Optional',
+      steps: [
+        {
+          title: 'Log in and open the workspace',
+          action: 'Sign in → open “{flowspace}”',
+          body: 'Wait until the workspace page is ready before continuing.',
+          bullets: ['Keep this route tab open until all four actions are complete.']
+        },
+        {
+          title: 'Open the order list',
+          action: 'Click “Orders” → wait for the list',
+          body: 'Continue when the order rows are visible.',
+          bullets: ['Please do not repeatedly refresh the page.']
+        },
+        {
+          title: 'Open any order',
+          titleB: 'Open the same order',
+          action: 'Choose any order → open it',
+          actionB: 'Search for the same order from Route A → open it',
+          body: 'Remember this order; you will open it again on Route B.',
+          bodyB: 'Open the exact same order you used on Route A.',
+          bullets: ['You may note the order number if that helps.'],
+          bulletsB: ['Wait until the main order information is visible.']
+        },
+        {
+          title: 'Open one work order',
+          action: 'Open any work order → view only',
+          body: 'This step is optional. If no work order is available, choose “Not attempted” below.',
+          bullets: ['Do not save, submit, approve, delete or send email.']
+        }
+      ],
+      ratingsTitle: 'How did each action feel?',
+      ratingsIntro: 'Choose the answer that best matches your experience.',
+      ratingNames: ['Smooth', 'Some waiting', 'Noticeably slow, but completed', 'Could not complete', 'Not attempted'],
+      continueB: 'Next: Route B',
+      continueCompare: 'Compare routes',
+      back: 'Back',
+      compareTitle: 'Which route felt better?',
+      compareIntro: 'Use your overall impression. You do not need to calculate or remember exact seconds.',
+      routeSummary: '{route} ratings',
+      notRated: 'Not rated',
+      fasterTitle: 'Overall, which route was faster?',
+      fasterOptions: ['Route A', 'Route B', 'About the same', 'Not sure'],
+      differencesTitle: 'Where did you notice a speed difference?',
+      differenceOptions: ['Login / workspace', 'Order list', 'Order detail', 'Work order', 'No clear difference'],
+      problemRouteTitle: 'Which route had a problem?',
+      problemRouteOptions: ['Route A', 'Route B', 'Both routes', 'Neither route'],
+      problemTypeTitle: 'What problem did you encounter?',
+      problemTypeOptions: ['Page opened slowly', 'Loading continued for a long time', 'Page did not open', 'Disconnected / error message', 'Other'],
+      exploreTitle: 'Optional: other pages you checked',
+      exploreHelp: 'After the required actions, did you browse any other page? Select all that apply.',
+      exploreOptions: ['Dashboard / home', 'Documents / attachments', 'Search / filter', 'Other page', 'I did not browse other pages'],
+      notes: 'Anything else you want us to know?',
+      notesPlaceholder: 'Page name, error message, when the issue happened, or any other detail…',
+      submit: 'Submit feedback',
+      download: 'Download test JSON',
+      submitting: 'Submitting…',
+      validation: 'Please complete the highlighted questions before continuing.',
+      clearConfirm: 'Clear all saved answers and start again?',
+      successTitle: 'Thank you — your feedback was submitted',
+      successBody: 'Your route comparison has been recorded. You can now close this page.',
+      previewSuccessTitle: 'Thank you — you are done',
+      previewSuccessBody: 'Your test is complete. You can now close this page.',
+      restart: 'Start a new test',
+      downloadAgain: 'Download again',
+      submitError: 'We could not confirm that your feedback was saved. Please keep this page open and try again or contact the test coordinator.'
     },
     zh: {
-      title: '一起，让访问体验更好。', intro: '帮助我们比较两个入口的访问体验。按指引操作，每完成一步就回来评价，不需要计时。',
-      navEyebrow: '您的反馈很重要', navTitle: '一次小测试，\n让体验更进一步。', navDescription: '相同的工作空间，不同的访问入口。我们想了解您的真实感受。',
-      nav: ['测试前准备', '体验入口 A', '体验入口 B', '对比与提交'], navSub: ['填写基本信息', '操作一步，评价一步', '重复同样的操作', '分享两轮体验'],
-      sidebar: '请保留本问卷页面。业务系统将在新标签页打开；完成每一步后，回到这里评价。', headerNote: '只读体验 · 问卷无需登录',
-      setup: '模板预览：尚未配置提交接口。可以填写、下载答案，但不会发送任何数据。',
-      missing: '发布信息尚未补齐：{fields}。可以预览问卷，但暂不能在线提交。',
-      configLabels: { contact: '反馈联系人', orderNumber: '指定订单编号', privacy: '采集告知', exit: '离开页面规则' },
-      details: '您的测试信息', required: '* 必填', tester: '测试人员姓名 / 测试标识', testerHint: '填写工作人员提供的标识，或您的姓名', location: '所在国家与城市', locationHint: '国家、城市，不需要详细地址',
-      browser: '浏览器', device: '设备', network: '网络类型', vpn: 'VPN 或代理', choose: '请选择',
-      browserOpts: ['Google Chrome', 'Microsoft Edge', 'Mozilla Firefox', 'Apple Safari', '其他 / 不确定'],
-      deviceOpts: ['Windows 电脑', 'macOS 电脑', 'Android', 'iPhone / iPad', '其他'], networkOpts: ['公司网络', '家庭网络', '手机热点', '其他', '不确定'], vpnOpts: ['启用', '未启用', '不确定'],
-      sameEnvironment: '保持两轮环境一致。', environmentText: '使用同一账号、浏览器、设备和网络，保持日常 VPN 状态。不主动清缓存，不反复刷新，不修改业务数据。',
-      first: '先测', second: '后测', readyAction: '开始体验入口 A', back: '上一步', next: '下一步', review: '比较两轮体验', download: '下载答案 JSON', submit: '提交反馈', submitting: '提交中…',
-      draft: '答案暂存在当前标签页，提交确认成功后清除；使用共享设备时，结束后请点击“清空答案”。', noStorage: '当前浏览器不支持暂存，请保持页面打开，刷新可能丢失答案。', clear: '清空答案', clearConfirm: '确认清空当前标签页的所有答案，重新开始吗？',
-      rated: '已评价 {count} / 8 个步骤', route: '入口 {route}', step: '第 {step} / 4 步', optional: '可选',
-      steps: ['登录并进入 FlowSpace', '打开订单列表', '搜索并打开指定订单', '打开工单'],
-      stepIntro: '在业务系统标签页完成操作，然后回到本页立即评价。',
-      instructions: [
-        '打开入口 {route}，使用获授权的账号登录，选择 {flow}。工作空间名称和导航区域出现后，在下方评价本步体验。',
-        '进入订单列表，等待订单记录显示。留意长时间转圈、空白或报错；不需要打开开发者工具，也不需要自行计时。',
-        '搜索指定订单 {order}，打开订单详情，等待基本信息和里程碑区域显示。两轮使用同一订单，方便比较。',
-        '如方便，在该订单的里程碑中打开一个有权限查看的工单，等待表单显示。两轮尽量使用同一工单。只查看，不保存、提交、审批、删除或发送邮件。'
+      headerNote: '感谢你帮助我们完成测试',
+      navEyebrow: '引导式测试',
+      navTitle: '比较两条线路',
+      navDescription: '按顺序完成 4 个阶段，进度会保存在当前设备。',
+      sidebarNote: '两条线路请使用同一设备、浏览器、账号和网络。',
+      stages: [['准备', '约 1 分钟'], ['线路 A', '先测试'], ['线路 B', '后测试'], ['对比并提交', '约 2 分钟']],
+      stage: '阶段', rated: '个步骤已评价', clear: '清除草稿', saved: '草稿已保存在当前设备',
+      previewWarningTitle: '当前为评审模式',
+      previewWarning: '页面可以完整体验，但发布配置补齐前不会发送数据。',
+      missing: '发布前仍需补充：',
+      missingLabels: { endpoint: '提交接口', orderNumber: '指定测试订单号', contact: '反馈联系人', privacyNotice: '数据采集说明', pageExitInstruction: '页面离开 / 等待规则', screenshots: '已脱敏的操作截图' },
+      setupTitle: '对比两条 Linkincrease 线路，帮我们找出更快的一条',
+      setupIntro: '请在线路 A、线路 B 完成相同的 4 个操作，全程约 5 分钟。最后根据整体感受选择更快的线路即可。',
+      goalLabel: '本次目标', sameActions: '完成相同 4 个操作', chooseFaster: '选出更快线路',
+      routeA: '线路 A', routeB: '线路 B', routeHints: ['先测试这条线路', '再测试这条线路'],
+      howTitle: '只需三步',
+      how: [['确认测试环境', '确认自动识别的信息，再填写所在城市。'], ['先 A 后 B', '每条线路只打开一次，按突出显示的操作完成测试。'], ['告诉我们感受', '选择哪条线路感觉更快，然后提交反馈。']],
+      infoTitle: '你的测试环境', tester: '姓名或测试编号', optional: '选填', testerPlaceholder: '例如：SA-01',
+      location: '城市 / 地区', locationPlaceholder: '例如：Johannesburg', locationCountry: '国家 / 城市', locationCountryPlaceholder: '例如：South Africa, Johannesburg', browser: '浏览器', device: '设备', network: '网络连接', vpn: 'VPN / 代理', choose: '请选择',
+      country: '国家', timezone: '时区', autoTitle: '测试环境信息', autoHelpComplete: '以下信息已自动识别。', autoHelpMissing: '部分信息未能识别，请仅在下方补充缺失项。', notDetected: '未识别', optionalField: '选填——知道时再选择',
+      browsers: ['Chrome', 'Microsoft Edge', 'Safari', 'Firefox', '其他'],
+      devices: ['Windows 电脑', 'Mac 电脑', 'iPhone / iPad', 'Android 手机 / 平板', '其他'],
+      networks: ['公司 Wi-Fi / 有线网络', '家庭 Wi-Fi / 有线网络', '移动数据 / 热点', '其他'],
+      vpns: ['未使用', '已使用', '不确定'],
+      consistencyTitle: '保证对比公平',
+      consistency: ['使用同一设备和浏览器', '使用同一账号和网络', '不要修改 VPN 设置', '不要清缓存或反复刷新', '不要同时测试两条线路'],
+      start: '开始测试线路 A', routeTitle: '测试{route}', routeIntro: '只打开一次{route}，在新标签页连续完成 4 个动作，再返回这里统一评价。',
+      openRoute: '打开{route}', opensNew: '将在新标签页打开', flowspace: '工作空间', order: '测试订单', notConfigured: '待确认',
+      routeSafetyTitle: '一个小提醒', routeSafety: '请先测试线路 A，再测试线路 B；两次测试保持同一设备和网络，并且不要同时打开两条线路。',
+      guideLabel: '页面位置示意', guideCaption: '蓝色线框表示需要点击的位置', visualLogin: '登录', visualWorkspace: '进入工作空间', visualOrderList: '订单列表', visualChooseOrder: '任选一个订单', visualSameOrder: '搜索同一订单', visualWorkOrder: '工作单', visualClick: '点击', actionLabel: '请完成', required: '必做', stepOptional: '选做',
+      steps: [
+        { title: '登录并进入工作空间', action: '登录 → 打开“{flowspace}”', body: '等待工作空间页面显示完成后再继续。', bullets: ['完成 4 个操作前，请保持当前线路页面打开。'] },
+        { title: '打开订单列表', action: '点击“订单” → 等待列表出现', body: '看到订单列表后继续下一步。', bullets: ['请不要反复刷新页面。'] },
+        { title: '打开任一订单', titleB: '打开与线路 A 相同的订单', action: '任选一个订单 → 打开详情', actionB: '搜索线路 A 的同一订单 → 打开详情', body: '请记住这个订单，线路 B 还需要再次打开。', bodyB: '请打开在线路 A 中使用的同一个订单。', bullets: ['如有需要，可以记一下订单号。'], bulletsB: ['等待订单主要信息显示完成。'] },
+        { title: '打开一个工作单', action: '打开任意工作单 → 仅查看', body: '这一步为选做；如果没有工作单，请在下方选择“未尝试”。', bullets: ['不要保存、提交、审批、删除或发送邮件。'] }
       ],
-      orderUnknown: '（待工作人员提供）', openRoute: '打开入口 {route}', newTab: '在新标签页打开 · 操作后请返回此处评价',
-      figure: ['登录页面', '选择指定 FlowSpace', '订单列表', '订单详情'], diagram: '仅为操作示意图，发布前可替换为已确认、脱敏的真实截图。', screenshot: '操作截图', imageFailed: '截图暂不可用，请参考文字指引。',
-      rate: '这一步的体验如何？', rateHelp: '根据实际感受单选一项，无需计算秒数。', ratings: ['顺畅', '有些等待', '明显缓慢，但已完成', '无法完成 / 无法继续', '未操作'],
-      rateNote: '如果前一步受阻导致无法操作，请选“未操作”。未完成全部步骤也可以反馈。', skip: '将本轮剩余未评价步骤标为“未操作”', skipHint: '仅补齐尚未评价的步骤，保留您已填写的评分。', skipWork: '跳过可选工单',
-      exploreTitle: '还想看看其他页面吗？', exploreIntro: '主要步骤已完成，您可以自由浏览其他有权限的页面，也可以跳过。',
-      exploreRules: '可以查看其他订单、里程碑、工单，切换菜单、搜索、筛选或翻页。保持只读：不新增、修改、删除、提交、审批或发送任何内容。',
-      browseQuestion: 'Q15 · 您还浏览了哪些页面？（选填、多选）', browseOpts: ['其他订单', '其他工单 / 里程碑', '筛选 / 翻页', '其他菜单', '未自由浏览'],
-      notes: 'Q16 · 补充说明或建议（选填）', notesHint: '例如：B 入口搜索后一直转圈。不要包含密码或客户敏感信息。',
-      problemTitle: '遇到问题时', problems: ['不要连续刷新或绕过证书警告；无法继续时可停止该步骤。', '找不到订单或没有权限时请联系工作人员，必要对比步骤不要随意更换订单。', '不要提供密码、Cookie、验证码、令牌或网络抓包；截图请遮盖个人和业务敏感信息。'],
-      contact: '反馈联系人', contactUnknown: '工作人员尚未填写联系方式。', exitTitle: '离开本轮页面前', exitUnknown: '发布前需由工作人员确认上报与离开页面规则；页面加载完成，不等于性能数据已成功保存。',
-      toB: '继续体验入口 B', compareTitle: '两个入口，哪个体验更好？', compareIntro: '核对步骤评分，再告诉我们您的整体感受。提交前可以返回任一步骤修改答案。',
-      q11: 'Q11 · 整体上哪个入口更快？（单选）', fasterOpts: ['入口 A 更快', '入口 B 更快', '无明显差别', '无法判断 / 未完成两轮'],
-      q12: 'Q12 · 哪些页面的速度差异最明显？（多选）', diffOpts: ['登录 / FlowSpace', '订单列表', '搜索', '订单详情', '工单', '无明显差别', '无法判断'], multiHelp: '可多选；“无明显差别”或“无法判断”不能与其他选项同时选择。',
-      q13: 'Q13 · 哪个入口出现过异常？（单选）', errorRouteOpts: ['两轮均无异常', '仅入口 A', '仅入口 B', '两个入口均有', '无法判断 / 未测试'],
-      q14: 'Q14 · 出现过哪些异常？（多选）', errorTypeOpts: ['持续转圈 / 空白', '报错提示', '无法登录或打开', '找不到订单 / 权限不足', '其他'],
-      privacyTitle: '关于本次反馈', privacyUnknown: '工作人员尚未提供经确认的采集用途与保存安排，在线收集前需先补齐。',
-      formScope: '本问卷提交测试标识、国家城市、所选设备网络信息和答案，不读取业务系统账号、Cookie 或页面耗时；接收时间由后端记录。',
-      localOnly: '接口尚未配置。可下载 JSON 查看请求结构或交给工作人员；下载不代表已提交。',
-      fieldError: '请填写必填项：{field}。', rateError: '请评价当前步骤，或选择“未操作”。', compareError: '请回答 {field}。',
-      incomplete: '还有步骤尚未评价，已跳转到第一个未填写步骤；如果未执行，请选择“未操作”。',
-      requestFailed: '未能确认提交成功，答案仍保留。请检查网络或联系工作人员；重试会使用同一个提交标识。',
-      timeout: '请求超时，无法确认后端是否已保存。答案仍保留，请使用相同提交标识重试或联系工作人员。',
-      endpointError: '接口必须是合法的 HTTPS 地址（仅本地测试允许 localhost 使用 HTTP）。',
-      successTitle: '感谢您，让体验更好。', successIntro: '后端已确认反馈保存成功，您可以关闭本页。', successId: '提交标识',
-      untitled: '尚未评价', downloadSuccess: '已导出 JSON，未向后端提交。', reset: '开始新的反馈', questions: '操作指引', stepResult: '第 {step} 步', optionalSkip: '未操作（可选）', loading: '正在等待后端确认保存…'
+      ratingsTitle: '这 4 个操作感觉如何？', ratingsIntro: '选择最接近本次体验的答案即可。',
+      ratingNames: ['流畅', '稍有等待', '明显较慢但已完成', '无法完成', '未尝试'],
+      continueB: '下一步：线路 B', continueCompare: '对比两条线路', back: '返回',
+      compareTitle: '哪条线路体验更好？', compareIntro: '根据整体感受回答即可，不需要计算或回忆具体秒数。',
+      routeSummary: '{route}评价', notRated: '未评价', fasterTitle: '整体来看，哪条线路更快？', fasterOptions: ['线路 A', '线路 B', '差不多', '不确定'],
+      differencesTitle: '哪些页面的速度有明显差异？', differenceOptions: ['登录 / 工作空间', '订单列表', '订单详情', '工作单', '没有明显差异'],
+      problemRouteTitle: '哪条线路遇到了问题？', problemRouteOptions: ['线路 A', '线路 B', '两条线路都有', '两条线路都没有'],
+      problemTypeTitle: '遇到了什么问题？', problemTypeOptions: ['页面打开较慢', '长时间加载中', '页面无法打开', '断开连接 / 错误提示', '其他'],
+      exploreTitle: '选填：还查看了哪些页面', exploreHelp: '完成必做动作后，你是否浏览了其他页面？可多选。',
+      exploreOptions: ['仪表盘 / 首页', '文档 / 附件', '搜索 / 筛选', '其他页面', '没有浏览其他页面'],
+      notes: '还有什么想告诉我们？', notesPlaceholder: '页面名称、错误提示、问题发生时间或其他信息……',
+      submit: '提交反馈', download: '下载测试 JSON', submitting: '正在提交……',
+      validation: '请先完成标记的问题再继续。', clearConfirm: '确定清除所有已保存答案并重新开始吗？',
+      successTitle: '感谢反馈，提交成功', successBody: '你的线路对比结果已记录，现在可以关闭此页面。',
+      previewSuccessTitle: '感谢帮助，测试完成', previewSuccessBody: '你已经完成本次测试，现在可以关闭这个页面。',
+      restart: '开始新的测试', downloadAgain: '再次下载',
+      submitError: '暂时无法确认反馈是否保存成功。请保留当前页面，稍后重试或联系测试负责人。'
     }
   };
-  const storageKey = 'linkincrease-survey:' + cfg.surveyId;
-  let storageAvailable = true;
-  let busy = false;
-  let succeeded = false;
-  let controller;
-  const fresh = () => ({ version: 1, language: cfg.defaultLanguage === 'zh' ? 'zh' : 'en', page: 0,
-    submissionId: crypto.randomUUID(), profile: { tester: '', location: '', browser: '', device: '', network: '', vpn: '' },
-    routes: { A: { ratings: [null, null, null, null], browsing: [], notes: '' }, B: { ratings: [null, null, null, null], browsing: [], notes: '' } },
-    comparison: { faster: null, differences: [], problemRoutes: null, problemTypes: [] } });
-  let state = fresh();
-  const validNumber = (n, max) => Number.isInteger(n) && n >= 1 && n <= max;
-  const validList = (a, max) => Array.isArray(a) && a.length <= max && new Set(a).size === a.length && a.every(n => validNumber(n, max));
-  function restore(value) {
-    if (value?.version !== 1 || !['en', 'zh'].includes(value.language) || !Number.isInteger(value.page) || value.page < 0 || value.page > 11 ||
-      typeof value.submissionId !== 'string' || !/^[a-f0-9-]{36}$/i.test(value.submissionId)) return false;
-    for (const [key, max] of Object.entries({ tester: 100, location: 120, browser: 1, device: 1, network: 1, vpn: 1 })) {
-      if (typeof value.profile?.[key] !== 'string' || value.profile[key].length > max) return false;
-    }
-    for (const r of ['A', 'B']) {
-      const v = value.routes?.[r];
-      if (!v || !Array.isArray(v.ratings) || v.ratings.length !== 4 || !v.ratings.every(n => n === null || validNumber(n, 5)) ||
-        !validList(v.browsing, 5) || typeof v.notes !== 'string' || v.notes.length > 2000) return false;
-    }
-    const c = value.comparison;
-    return c && (c.faster === null || validNumber(c.faster, 4)) && validList(c.differences, 7) &&
-      (c.problemRoutes === null || validNumber(c.problemRoutes, 5)) && validList(c.problemTypes, 5);
-  }
-  try {
-    const cached = JSON.parse(sessionStorage.getItem(storageKey) || 'null');
-    if (cached && restore(cached)) state = cached;
-  } catch { storageAvailable = false; }
-  const t = (key, values = {}) => {
-    let value = messages[state.language][key];
-    if (typeof value !== 'string') return value;
-    for (const [name, replacement] of Object.entries(values)) value = value.replaceAll('{' + name + '}', String(replacement));
-    return value;
+
+  const defaultState = () => {
+    const detected = detectEnvironment();
+    return {
+      language: cfg.defaultLanguage === 'zh' ? 'zh' : 'en',
+      page: 0,
+      maxPage: 0,
+      profile: {
+        tester: '', location: '', country: detected.country, browser: detected.browser,
+        device: detected.device, timezone: detected.timezone, network: detected.network, vpn: ''
+      },
+      routes: {
+        A: { opened: false, ratings: ['', '', '', ''] },
+        B: { opened: false, ratings: ['', '', '', ''] }
+      },
+      comparison: { faster: '', differences: [], problemRoute: '', problemTypes: [], explored: [], notes: '' },
+      completed: false,
+      previewComplete: false,
+      submissionId: createId(),
+      updatedAt: ''
+    };
   };
-  const escape = (value) => String(value).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  const el = (name, attrs = {}) => { const n = document.createElement(name); Object.assign(n, attrs); return n; };
-  const routeFor = (page = state.page) => page >= 1 && page <= 5 ? 'A' : page >= 6 && page <= 10 ? 'B' : null;
-  const stepFor = () => state.page >= 1 && state.page <= 4 ? state.page - 1 : state.page >= 6 && state.page <= 9 ? state.page - 6 : null;
-  const groupFor = () => state.page === 0 ? 0 : state.page <= 5 ? 1 : state.page <= 10 ? 2 : 3;
-  const missingConfig = () => [!cfg.contact && 'contact', !cfg.orderNumber && 'orderNumber', !cfg.privacyNotice[state.language] && 'privacy', !cfg.pageExitInstruction[state.language] && 'exit'].filter(Boolean);
-  function save() {
-    if (succeeded) return;
-    try { sessionStorage.setItem(storageKey, JSON.stringify(state)); } catch { storageAvailable = false; }
-    $('draft-status').textContent = t(storageAvailable ? 'draft' : 'noStorage');
+
+  let state = loadState();
+  let isSubmitting = false;
+
+  const el = {
+    content: document.querySelector('#content'), navigation: document.querySelector('#navigation'),
+    sectionLabel: document.querySelector('#section-label'), progressLabel: document.querySelector('#progress-label'),
+    progressFill: document.querySelector('#progress-fill'), progressTrack: document.querySelector('.progress-track'),
+    language: document.querySelector('#language'), clear: document.querySelector('#clear'),
+    feedback: document.querySelector('#feedback'), actions: document.querySelector('#actions'),
+    setupWarning: document.querySelector('#setup-warning'), draftStatus: document.querySelector('#draft-status')
+  };
+
+  function createId() {
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return `li-${Date.now()}-${Math.random().toString(16).slice(2)}`;
   }
-  function rated() { return ['A', 'B'].reduce((n, r) => n + state.routes[r].ratings.filter(v => v !== null).length, 0); }
-  function updateProgress() {
-    $('progress-label').textContent = t('rated', { count: rated() });
-    $('progress-fill').style.width = (rated() / 8 * 100) + '%';
-    document.querySelector('.progress-track').setAttribute('aria-valuenow', String(rated()));
-  }
-  function feedback(message, focus = true) {
-    $('feedback').textContent = message;
-    $('feedback').hidden = false;
-    if (focus) $('feedback').focus();
-  }
-  function go(page) {
-    if (busy) return;
-    state.page = page;
-    save(); render();
-    $('main').focus();
-    window.scrollTo({ top: 0, behavior: 'instant' });
-  }
-  function button(text, action, style = 'primary') {
-    const b = el('button', { type: 'button', className: 'button ' + style, textContent: text, disabled: busy });
-    b.addEventListener('click', action);
-    return b;
-  }
-  function routeCard(route) {
-    return `<div class="route-card"><span class="route-letter ${route === 'B' ? 'route-b' : ''}">${route}</span><div><strong>${escape(t('route', { route }))}</strong><span class="mini-tag">${escape(t(route === 'A' ? 'first' : 'second'))}</span><p>${escape(new URL(cfg.routes[route]).host)}</p></div></div>`;
-  }
-  function choiceGroup({ title, name, options, selected, onChange, multi = false, exclusive = [], help = '' }) {
-    const fs = el('fieldset', { className: 'choices' });
-    fs.append(el('legend', { textContent: title }));
-    const grid = el('div', { className: 'choice-grid' });
-    const inputs = [];
-    options.forEach((label, i) => {
-      const n = i + 1;
-      const wrap = el('label', { className: 'choice' });
-      const input = el('input', { type: multi ? 'checkbox' : 'radio', name, value: String(n), checked: multi ? selected.includes(n) : selected === n });
-      input.id = name + '-' + n;
-      inputs.push(input);
-      input.addEventListener('change', () => {
-        if (multi) {
-          if (input.checked) {
-            inputs.forEach(other => {
-              if (other !== input && (exclusive.includes(n) || exclusive.includes(Number(other.value)))) other.checked = false;
-            });
-          }
-          onChange(inputs.filter(x => x.checked).map(x => Number(x.value)));
-        } else onChange(n);
-        save(); updateProgress();
-        $('feedback').hidden = true;
-      });
-      wrap.append(input, el('span', { textContent: label }), el('span', { className: 'choice-number', textContent: String(n) }));
-      grid.append(wrap);
-    });
-    fs.append(grid);
-    if (help) fs.append(el('p', { className: 'help', textContent: help }));
-    return fs;
-  }
-  function profilePage() {
-    $('content').innerHTML = `<p class="eyebrow">ACCESS EXPERIENCE SURVEY</p><h1>${escape(t('title'))}</h1><p class="intro">${escape(t('intro'))}</p><div class="cards">${routeCard('A')}${routeCard('B')}</div><section class="panel"><div class="panel-heading"><h2>${escape(t('details'))}</h2><span>${escape(t('required'))}</span></div><div class="form-grid" id="profile-fields"></div></section><div class="context-note"><span class="context-icon" aria-hidden="true">i</span><p><strong>${escape(t('sameEnvironment'))}</strong> ${escape(t('environmentText'))}</p></div>`;
-    const fields = [
-      ['tester', null, 'testerHint', 100], ['location', null, 'locationHint', 120],
-      ['browser', 'browserOpts'], ['device', 'deviceOpts'], ['network', 'networkOpts'], ['vpn', 'vpnOpts']
-    ];
-    for (const [key, opts, hint, maxlength] of fields) {
-      const label = el('label', { className: 'field' });
-      const title = el('span', { textContent: t(key) });
-      title.append(el('b', { className: 'required', textContent: ' *' }));
-      const input = el(opts ? 'select' : 'input', { id: 'profile-' + key, name: key, required: true });
-      if (opts) {
-        input.append(el('option', { value: '', textContent: t('choose') }));
-        t(opts).forEach((v, i) => input.append(el('option', { value: String(i + 1), textContent: v })));
-      } else {
-        input.type = 'text'; input.maxLength = maxlength; input.placeholder = t(hint); input.autocomplete = 'off';
-      }
-      input.value = state.profile[key];
-      input.addEventListener('input', () => { state.profile[key] = input.value; save(); });
-      label.append(title, input); $('profile-fields').append(label);
+
+  function detectEnvironment() {
+    const ua = navigator.userAgent || '';
+    if (SIMULATE_MISSING_DETECTION) {
+      return { browser: 'unknown', device: 'unknown', timezone: '—', country: '', network: '' };
     }
+    let browser = 'unknown';
+    if (/Edg\//.test(ua)) browser = 'edge';
+    else if (/Chrome\//.test(ua) && !/Edg\//.test(ua)) browser = 'chrome';
+    else if (/Firefox\//.test(ua)) browser = 'firefox';
+    else if (/Safari\//.test(ua) && /Version\//.test(ua)) browser = 'safari';
+
+    let device = 'unknown';
+    if (/Windows/i.test(ua)) device = 'windows';
+    else if (/iPhone|iPad|iPod/i.test(ua)) device = 'ios';
+    else if (/Android/i.test(ua)) device = 'android';
+    else if (/Macintosh|Mac OS X/i.test(ua)) device = 'mac';
+
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone || '—';
+    const countryByTimezone = {
+      'Africa/Johannesburg': 'South Africa',
+      'Asia/Shanghai': 'China',
+      'Asia/Chongqing': 'China',
+      'Europe/London': 'United Kingdom',
+      'America/New_York': 'United States',
+      'America/Chicago': 'United States',
+      'America/Denver': 'United States',
+      'America/Los_Angeles': 'United States'
+    };
+    const country = countryByTimezone[timezone] || '';
+    const connectionType = navigator.connection?.type || '';
+    const network = connectionType === 'cellular' ? 'mobile' : '';
+    return { browser, device, timezone, country, network };
   }
-  function profileValid() {
-    for (const key of ['tester', 'location', 'browser', 'device', 'network', 'vpn']) {
-      const v = state.profile[key];
-      const max = { browser: 5, device: 5, network: 5, vpn: 3 }[key];
-      if (!v.trim() || (max && !validNumber(Number(v), max))) {
-        if (state.page !== 0) go(0);
-        feedback(t('fieldError', { field: t(key) }), false);
-        $('profile-' + key).focus(); return false;
-      }
-    }
-    return true;
-  }
-  function schematic(kind) {
-    const title = ['Linkincrease', cfg.flowSpace, t('steps')[1], t('steps')[2]][kind];
-    const contents = kind === 0 ? '<div class="mock-field">Email</div><div class="mock-field">Password</div><div class="mock-action">Log in</div>' :
-      kind === 1 ? `<div class="mock-chip">${escape(cfg.flowSpace)}</div>` : kind === 2 ? '<div class="mock-table"><div class="mock-row"></div><div class="mock-row"></div><div class="mock-row"></div><div class="mock-row"></div></div>' : '<div class="mock-columns"><div></div><div></div></div><div class="mock-chip">Milestones / Work orders</div>';
-    return `<div class="schematic ${kind === 1 ? 'small' : ''}" aria-hidden="true"><div class="mock-window"><div class="mock-dots"><i></i><i></i><i></i></div><div class="mock-title">${escape(title)}</div>${contents}</div></div>`;
-  }
-  function figure(kind) {
-    const key = ['login', 'flowspace', 'orders', 'detail'][kind];
-    const f = el('figure', { className: 'illustration' });
-    const src = cfg.screenshots[key];
-    if (src) {
-      try {
-        const url = new URL(src, document.baseURI);
-        if (!['http:', 'https:', 'file:'].includes(url.protocol)) throw Error('Image URL');
-        const img = el('img', { src: url.href, alt: t('figure')[kind], loading: 'lazy' });
-        img.addEventListener('error', () => { img.replaceWith(el('p', { className: 'help', textContent: t('imageFailed') })); });
-        f.append(img);
-      } catch { f.append(el('p', { textContent: t('imageFailed') })); }
-    } else f.innerHTML = schematic(kind);
-    f.append(el('figcaption', { textContent: t('figure')[kind] + ' · ' + t(src ? 'screenshot' : 'diagram') }));
-    return f;
-  }
-  function openRouteLink(route) {
-    const a = el('a', { className: 'button primary', textContent: t('openRoute', { route }) + ' ↗', target: '_blank', rel: 'noopener noreferrer' });
-    const url = new URL(cfg.routes[route]);
-    if (url.protocol !== 'https:') throw Error('Business route must use HTTPS');
-    a.href = url.href; return a;
-  }
-  function stepPage(route, step) {
-    const instruction = t('instructions')[step].replaceAll('{route}', route).replaceAll('{flow}', cfg.flowSpace).replaceAll('{order}', cfg.orderNumber || t('orderUnknown'));
-    $('content').innerHTML = `<div class="stage-badge">${escape(t('route', { route }))} <span>·</span> ${escape(t('step', { step: step + 1 }))}${step === 3 ? ' · ' + escape(t('optional')) : ''}</div><h1>${escape(t('steps')[step])}</h1><p class="intro">${escape(t('stepIntro'))}</p><section class="panel" id="instruction-panel"><p class="step-instructions">${escape(instruction)}</p><div class="step-toolbar" id="route-link"><small>${escape(t('newTab'))}</small></div></section><section class="panel" id="rate-panel"><div class="rating-title"><h2>${escape(t('rate'))}</h2><p>${escape(t('rateHelp'))}</p></div></section>`;
-    $('route-link').prepend(openRouteLink(route));
-    const kinds = step === 0 ? [0, 1] : step === 1 ? [2] : step === 2 ? [3] : [];
-    kinds.forEach(kind => $('instruction-panel').append(figure(kind)));
-    $('rate-panel').append(choiceGroup({ title: 'Q' + (7 + step) + ' · ' + t('route', { route }), name: 'rating-' + route + '-' + step,
-      options: t('ratings'), selected: state.routes[route].ratings[step], onChange: v => { state.routes[route].ratings[step] = v; } }));
-    $('rate-panel').append(el('p', { className: 'subtle', textContent: t('rateNote') }));
-    const skip = button(t(step === 3 ? 'skipWork' : 'skip'), () => {
-      if (step === 3) state.routes[route].ratings[3] = 5;
-      else state.routes[route].ratings = state.routes[route].ratings.map((value, i) => i >= step && value === null ? 5 : value);
-      go(route === 'A' ? 5 : 10);
-    }, 'ghost');
-    $('rate-panel').append(skip);
-    if (step < 3) $('rate-panel').append(el('p', { className: 'help', textContent: t('skipHint') }));
-  }
-  function explorePage(route) {
-    $('content').innerHTML = `<div class="stage-badge">${escape(t('route', { route }))} · ${escape(t('optional'))}</div><h1>${escape(t('exploreTitle'))}</h1><p class="intro">${escape(t('exploreIntro'))}</p><section class="panel"><p class="step-instructions">${escape(t('exploreRules'))}</p><div class="step-toolbar" id="explore-link"></div><div id="browse-choices"></div><label class="field" style="margin-top:25px"><span>${escape(t('notes'))}</span><textarea id="route-notes" maxlength="2000" placeholder="${escape(t('notesHint'))}"></textarea></label></section><section class="panel"><div class="panel-heading"><h2>${escape(t('problemTitle'))}</h2></div><ul class="checklist">${t('problems').map(p => `<li>${escape(p)}</li>`).join('')}</ul><p class="help">${escape(t('contact'))}: ${escape(cfg.contact || t('contactUnknown'))}</p></section><div class="context-note"><span class="context-icon" aria-hidden="true">i</span><p><strong>${escape(t('exitTitle'))}.</strong> ${escape(cfg.pageExitInstruction[state.language] || t('exitUnknown'))}</p></div>`;
-    $('explore-link').append(openRouteLink(route));
-    $('browse-choices').append(choiceGroup({ title: t('browseQuestion'), name: 'browsing-' + route, options: t('browseOpts'), selected: state.routes[route].browsing,
-      multi: true, exclusive: [5], onChange: v => { state.routes[route].browsing = v; } }));
-    $('route-notes').value = state.routes[route].notes;
-    $('route-notes').addEventListener('input', e => { state.routes[route].notes = e.target.value; save(); });
-  }
-  function comparisonPage() {
-    $('content').innerHTML = `<p class="eyebrow">A / B FEEDBACK</p><h1>${escape(t('compareTitle'))}</h1><p class="intro">${escape(t('compareIntro'))}</p><div class="review-grid">${['A', 'B'].map(r => `<div class="review-card"><h3>${escape(t('route', { route: r }))}</h3>${state.routes[r].ratings.map((v, i) => `<div class="review-row"><span>${escape(t('stepResult', { step: i + 1 }))}</span><strong>${escape(v ? t('ratings')[v - 1] : t('untitled'))}</strong></div>`).join('')}</div>`).join('')}</div><section class="panel" id="comparison-questions"></section><section class="panel"><div class="panel-heading"><h2>${escape(t('privacyTitle'))}</h2></div><p class="help">${escape(cfg.privacyNotice[state.language] || t('privacyUnknown'))}</p><p class="help">${escape(t('formScope'))}</p><p class="help">${escape(t('contact'))}: ${escape(cfg.contact || t('contactUnknown'))}</p></section>${!cfg.endpoint ? `<p class="download-hint">${escape(t('localOnly'))}</p>` : ''}`;
-    const specs = [
-      ['faster', 'q11', 'fasterOpts', false, []], ['differences', 'q12', 'diffOpts', true, [6, 7]], ['problemRoutes', 'q13', 'errorRouteOpts', false, []]
-    ];
-    specs.forEach(([key, title, options, multi, exclusive]) => {
-      const div = el('div', { className: 'question' });
-      div.append(choiceGroup({ title: t(title), name: 'compare-' + key, options: t(options), selected: state.comparison[key], multi, exclusive,
-        help: key === 'differences' ? t('multiHelp') : '', onChange: v => {
-          state.comparison[key] = v;
-          if (key === 'problemRoutes') {
-            if (![2, 3, 4].includes(v)) state.comparison.problemTypes = [];
-            renderProblemTypes();
-          }
-        } }));
-      $('comparison-questions').append(div);
-    });
-    $('comparison-questions').append(el('div', { id: 'problem-types', className: 'question' }));
-    renderProblemTypes();
-  }
-  function renderProblemTypes() {
-    const box = $('problem-types');
-    if (!box) return;
-    box.replaceChildren(); box.hidden = ![2, 3, 4].includes(state.comparison.problemRoutes);
-    if (!box.hidden) box.append(choiceGroup({ title: t('q14'), name: 'compare-problemTypes', options: t('errorTypeOpts'), selected: state.comparison.problemTypes,
-      multi: true, onChange: v => { state.comparison.problemTypes = v; } }));
-  }
-  function validation() {
-    if (!profileValid()) return false;
-    for (const route of ['A', 'B']) {
-      const missing = state.routes[route].ratings.findIndex(v => v === null);
-      if (missing !== -1) { go((route === 'A' ? 1 : 6) + missing); feedback(t('incomplete')); return false; }
-    }
-    for (const [key, label] of [['faster', 'Q11'], ['differences', 'Q12'], ['problemRoutes', 'Q13'], ['problemTypes', 'Q14']]) {
-      if (key === 'problemTypes' && ![2, 3, 4].includes(state.comparison.problemRoutes)) continue;
-      const value = state.comparison[key];
-      if (value === null || (Array.isArray(value) && !value.length)) { feedback(t('compareError', { field: label })); return false; }
-    }
-    return true;
-  }
-  function payload() {
-    return { surveyId: cfg.surveyId, schemaVersion: 1, submissionId: state.submissionId, language: state.language,
-      participant: { identifier: state.profile.tester.trim(), countryCity: state.profile.location.trim(), browser: Number(state.profile.browser), device: Number(state.profile.device), network: Number(state.profile.network), vpn: Number(state.profile.vpn) },
-      context: { flowSpace: cfg.flowSpace, orderNumber: cfg.orderNumber || null },
-      routes: ['A', 'B'].map(route => ({ route, entryUrl: cfg.routes[route], answers: {
-        q7: state.routes[route].ratings[0], q8: state.routes[route].ratings[1], q9: state.routes[route].ratings[2], q10: state.routes[route].ratings[3],
-        q15: [...state.routes[route].browsing], q16: state.routes[route].notes.trim() } })),
-      comparison: { q11: state.comparison.faster, q12: [...state.comparison.differences], q13: state.comparison.problemRoutes, q14: [...state.comparison.problemTypes] } };
-  }
-  function download() {
-    if (!validation()) return;
-    const url = URL.createObjectURL(new Blob([JSON.stringify(payload(), null, 2)], { type: 'application/json' }));
-    const a = el('a', { href: url, download: 'trade-feedback-' + state.submissionId + '.json' });
-    document.body.append(a); a.click(); a.remove();
-    setTimeout(() => URL.revokeObjectURL(url), 1000);
-    feedback(t('downloadSuccess'));
-  }
-  function lock(value) {
-    busy = value;
-    document.querySelectorAll('input, select, textarea, button').forEach(n => { n.disabled = value; });
-    $('main').setAttribute('aria-busy', String(value));
-    const submit = $('submit'); if (submit) submit.textContent = t(value ? 'submitting' : 'submit');
-  }
-  async function submit() {
-    if (busy || succeeded || !validation()) return;
-    if (!cfg.endpoint || missingConfig().length) { feedback(!cfg.endpoint ? t('setup') : t('missing', { fields: missingConfig().map(k => t('configLabels')[k]).join(', ') })); return; }
-    let endpoint;
+
+  function loadState() {
     try {
-      endpoint = new URL(cfg.endpoint);
-      if (endpoint.username || endpoint.password || endpoint.hash || (endpoint.protocol !== 'https:' && !(endpoint.protocol === 'http:' && ['localhost', '127.0.0.1', '[::1]'].includes(endpoint.hostname)))) throw Error('URL');
-    } catch { feedback(t('endpointError')); return; }
-    const data = payload();
-    controller = new AbortController();
-    lock(true);
-    feedback(t('loading'), false);
-    const timeout = setTimeout(() => controller.abort(), 20000);
-    try {
-      const response = await fetch(endpoint.href, { method: 'POST', headers: { 'Content-Type': 'application/json' }, credentials: 'omit', referrerPolicy: 'no-referrer',
-        cache: 'no-store', body: JSON.stringify(data), signal: controller.signal });
-      if (!response.ok) throw Error('HTTP ' + response.status);
-      const result = await response.json();
-      if (result?.code !== 0 || result?.data?.submissionId !== data.submissionId) throw Error('Unconfirmed save');
-      succeeded = true;
-      try { sessionStorage.removeItem(storageKey); } catch { /* A successful save must not depend on browser storage. */ }
-      lock(false); render();
-    } catch (err) {
-      lock(false); feedback(t(err.name === 'AbortError' ? 'timeout' : 'requestFailed'));
-    } finally { clearTimeout(timeout); }
+      const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+      if (!parsed || typeof parsed !== 'object') return defaultState();
+      const base = defaultState();
+      const merged = {
+        ...base, ...parsed,
+        profile: { ...base.profile, ...(parsed.profile || {}) },
+        routes: {
+          A: { ...base.routes.A, ...(parsed.routes?.A || {}), ratings: normalizeArray(parsed.routes?.A?.ratings, 4) },
+          B: { ...base.routes.B, ...(parsed.routes?.B || {}), ratings: normalizeArray(parsed.routes?.B?.ratings, 4) }
+        },
+        comparison: { ...base.comparison, ...(parsed.comparison || {}) }
+      };
+      const detected = detectEnvironment();
+      if (SIMULATE_MISSING_DETECTION) {
+        merged.profile.browser = 'unknown';
+        merged.profile.device = 'unknown';
+        merged.profile.country = '';
+        merged.profile.timezone = '—';
+        return merged;
+      }
+      if (detected.browser !== 'unknown' || !merged.profile.browser) merged.profile.browser = detected.browser;
+      if (detected.device !== 'unknown' || !merged.profile.device) merged.profile.device = detected.device;
+      merged.profile.timezone = detected.timezone;
+      merged.profile.country = detected.country;
+      if (!merged.profile.network && detected.network) merged.profile.network = detected.network;
+      return merged;
+    } catch (_) {
+      return defaultState();
+    }
   }
+
+  function normalizeArray(value, length) {
+    const arr = Array.isArray(value) ? value.slice(0, length) : [];
+    while (arr.length < length) arr.push('');
+    return arr;
+  }
+
+  function saveState() {
+    state.updatedAt = new Date().toISOString();
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    el.draftStatus.textContent = t('saved');
+  }
+
+  function t(key) { return TEXT[state.language][key]; }
+  function esc(value) { return String(value ?? '').replace(/[&<>'"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c])); }
+  function interpolate(value, vars) { return Object.entries(vars).reduce((s, [k, v]) => s.replaceAll(`{${k}}`, v), value); }
+  function routeName(route) { return state.language === 'zh' ? `线路 ${route}` : `Route ${route}`; }
+
+  function getMissingConfig() {
+    const missing = [];
+    if (!cfg.endpoint) missing.push('endpoint');
+    if (!cfg.contact) missing.push('contact');
+    if (!cfg.privacyNotice?.[state.language]) missing.push('privacyNotice');
+    if (!cfg.pageExitInstruction?.[state.language]) missing.push('pageExitInstruction');
+    if (!cfg.screenshots || Object.values(cfg.screenshots).every(v => !v)) missing.push('screenshots');
+    return missing;
+  }
+
+  function countRatings() {
+    return [...state.routes.A.ratings, ...state.routes.B.ratings].filter(Boolean).length;
+  }
+
+  function renderChrome() {
+    document.documentElement.lang = state.language;
+    document.title = state.language === 'zh' ? 'Linkincrease · 访问线路测试' : 'Linkincrease · Access route test';
+    document.querySelector('.skip-link').textContent = state.language === 'zh' ? '跳到测试内容' : 'Skip to the test guide';
+    document.querySelector('#header-note').textContent = t('headerNote');
+    document.querySelector('#nav-eyebrow').textContent = t('navEyebrow');
+    document.querySelector('#nav-title').textContent = t('navTitle');
+    document.querySelector('#nav-description').textContent = t('navDescription');
+    document.querySelector('#sidebar-note').textContent = t('sidebarNote');
+    document.querySelector('.page-footer').hidden = !REVIEW_MODE;
+    el.language.textContent = state.language === 'en' ? '中文' : 'English';
+    el.clear.textContent = t('clear');
+    el.sectionLabel.textContent = `${t('stage')} ${state.page + 1} / 4 · ${t('stages')[state.page][0]}`;
+    el.progressLabel.textContent = `${countRatings()} / 8 ${t('rated')}`;
+    const percent = (countRatings() / 8) * 100;
+    el.progressFill.style.width = `${percent}%`;
+    el.progressTrack.setAttribute('aria-valuenow', String(countRatings()));
+    renderNavigation();
+    renderSetupWarning();
+  }
+
+  function renderNavigation() {
+    el.navigation.innerHTML = t('stages').map((item, index) => {
+      const complete = isStageComplete(index);
+      return `<button class="nav-item${state.page === index ? ' active' : ''}${complete ? ' complete' : ''}" type="button" data-nav="${index}" ${state.completed ? 'disabled' : ''} aria-current="${state.page === index ? 'step' : 'false'}">
+        <span class="nav-index">${complete ? '✓' : index + 1}</span>
+        <span class="nav-copy"><strong>${esc(item[0])}</strong><small>${esc(item[1])}</small></span>
+        <span class="nav-arrow" aria-hidden="true">›</span>
+      </button>`;
+    }).join('');
+    el.navigation.querySelectorAll('[data-nav]').forEach(button => button.addEventListener('click', () => {
+      state.page = Number(button.dataset.nav);
+      state.maxPage = Math.max(state.maxPage, state.page);
+      saveState();
+      render();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      document.querySelector('#main').focus({ preventScroll: true });
+    }));
+  }
+
+  function isStageComplete(index) {
+    if (index === 0) return validateProfile(false);
+    if (index === 1) return state.routes.A.ratings.every(Boolean);
+    if (index === 2) return state.routes.B.ratings.every(Boolean);
+    return state.completed || state.previewComplete;
+  }
+
+  function renderSetupWarning() {
+    if (!REVIEW_MODE) {
+      el.setupWarning.hidden = true;
+      return;
+    }
+    const missing = getMissingConfig();
+    if (!missing.length || state.completed) {
+      el.setupWarning.hidden = true;
+      return;
+    }
+    el.setupWarning.hidden = false;
+    el.setupWarning.innerHTML = `<strong>${esc(t('previewWarningTitle'))}</strong><p>${esc(t('previewWarning'))}</p><p><strong>${esc(t('missing'))}</strong> ${missing.map(k => esc(t('missingLabels')[k])).join('、')}</p>`;
+  }
+
   function render() {
-    document.documentElement.lang = state.language === 'zh' ? 'zh-CN' : 'en';
-    document.title = state.language === 'zh' ? 'Linkincrease · 访问体验问卷' : 'Linkincrease · Access experience survey';
-    $('language').textContent = state.language === 'zh' ? 'English' : '中文';
-    $('header-note').textContent = t('headerNote');
-    $('nav-eyebrow').textContent = t('navEyebrow'); $('nav-title').textContent = t('navTitle');
-    $('nav-description').textContent = t('navDescription'); $('sidebar-note').textContent = t('sidebar');
-    $('section-label').textContent = t('nav')[groupFor()];
-    $('clear').textContent = t('clear');
-    $('clear').hidden = succeeded;
-    $('integration').hidden = !!cfg.endpoint || succeeded;
-    $('feedback').hidden = true;
-    const warn = !cfg.endpoint ? t('setup') : missingConfig().length ? t('missing', { fields: missingConfig().map(k => t('configLabels')[k]).join(', ') }) : '';
-    $('setup-warning').textContent = warn; $('setup-warning').hidden = !warn || succeeded;
-    $('navigation').replaceChildren();
-    [0, 1, 6, 11].forEach((page, i) => {
-      const nav = el('button', { type: 'button', className: 'nav-item' + (groupFor() === i ? ' active' : ''), disabled: succeeded || busy });
-      nav.innerHTML = `<span class="nav-number">${i + 1}</span><span class="nav-text"><strong>${escape(t('nav')[i])}</strong><small>${escape(t('navSub')[i])}</small></span>`;
-      if (groupFor() === i) nav.setAttribute('aria-current', 'step');
-      nav.addEventListener('click', () => go(page)); $('navigation').append(nav);
+    clearFeedback();
+    renderChrome();
+    if (state.completed || state.previewComplete) return renderSuccess();
+    if (state.page === 0) renderPrepare();
+    if (state.page === 1) renderRoute('A');
+    if (state.page === 2) renderRoute('B');
+    if (state.page === 3) renderCompare();
+    bindCommonFields();
+  }
+
+  function renderPrepare() {
+    const p = state.profile;
+    const missingCountry = !p.country;
+    const missingBrowser = p.browser === 'unknown';
+    const missingDevice = p.device === 'unknown';
+    const hasMissingEnvironment = missingCountry || missingBrowser || missingDevice;
+    const locationLabel = missingCountry ? t('locationCountry') : t('location');
+    const locationPlaceholder = missingCountry ? t('locationCountryPlaceholder') : t('locationPlaceholder');
+    el.content.innerHTML = `
+      <section class="hero-panel">
+        <div class="hero-copy">
+          <p class="overline">${esc(t('goalLabel'))}</p>
+          <h2>${esc(t('setupTitle'))}</h2>
+          <p>${esc(t('setupIntro'))}</p>
+        </div>
+        <div class="route-compare">
+          <div class="route-pair">
+            <div class="route-chip"><span class="route-sequence">1</span><span><strong>${esc(t('routeA'))}</strong><small>${esc(t('routeHints')[0])}</small></span></div>
+            <span class="route-vs" aria-hidden="true">VS</span>
+            <div class="route-chip"><span class="route-sequence">2</span><span><strong>${esc(t('routeB'))}</strong><small>${esc(t('routeHints')[1])}</small></span></div>
+          </div>
+          <div class="compare-outcome"><span>${esc(t('sameActions'))}</span><b aria-hidden="true">→</b><strong>${esc(t('chooseFaster'))}</strong></div>
+        </div>
+      </section>
+      <h2 class="section-title">${esc(t('howTitle'))}</h2>
+      <div class="how-grid">${t('how').map((item, i) => `<article class="how-card"><span class="how-number">${i + 1}</span><h3>${esc(item[0])}</h3><p>${esc(item[1])}</p></article>`).join('')}</div>
+      <h2 class="section-title">${esc(t('infoTitle'))}</h2>
+      <section class="detected-panel"><div class="detected-heading"><span class="detected-icon${hasMissingEnvironment ? ' is-warning' : ''}">${hasMissingEnvironment ? '!' : '✓'}</span><div><h3>${esc(t('autoTitle'))}</h3><p>${esc(hasMissingEnvironment ? t('autoHelpMissing') : t('autoHelpComplete'))}</p></div></div><div class="detected-grid">
+        ${detectedItem(t('country'), p.country || t('notDetected'), missingCountry)}
+        ${detectedItem(t('browser'), environmentLabel('browser', p.browser), missingBrowser)}
+        ${detectedItem(t('device'), environmentLabel('device', p.device), missingDevice)}
+        ${p.timezone && p.timezone !== '—' ? detectedItem(t('timezone'), p.timezone) : ''}
+      </div></section>
+      <div class="form-grid setup-fields">
+        ${textField('location', locationLabel, p.location, locationPlaceholder, true)}
+        ${missingBrowser ? selectField('browser', t('browser'), t('browsers'), p.browser, ['chrome', 'edge', 'safari', 'firefox', 'other'], true) : ''}
+        ${missingDevice ? selectField('device', t('device'), t('devices'), p.device, ['windows', 'mac', 'ios', 'android', 'other'], true) : ''}
+        ${selectField('network', t('network'), t('networks'), p.network, ['office', 'home', 'mobile', 'other'], false)}
+        ${selectField('vpn', t('vpn'), t('vpns'), p.vpn, ['no', 'yes', 'unsure'], false)}
+      </div>
+      <div class="notice notice-info" style="margin-top:18px"><strong>${esc(t('consistencyTitle'))}</strong><ul class="consistency-list">${t('consistency').map(item => `<li>${esc(item)}</li>`).join('')}</ul></div>`;
+    el.actions.innerHTML = `<button class="primary-button" type="button" data-next>${esc(t('start'))}</button>`;
+    el.actions.querySelector('[data-next]').addEventListener('click', () => {
+      if (!validateProfile(true)) return;
+      goTo(1);
     });
-    updateProgress();
-    $('actions').replaceChildren();
-    if (succeeded) {
-      $('content').innerHTML = `<section class="panel result-box"><div class="result-icon" aria-hidden="true">✓</div><h1>${escape(t('successTitle'))}</h1><p class="intro">${escape(t('successIntro'))}</p><p class="result-id">${escape(t('successId'))}: ${escape(state.submissionId)}</p></section>`;
-      $('draft-status').textContent = ''; $('actions').append(button(t('reset'), reset, 'secondary')); return;
-    }
-    $('draft-status').textContent = t(storageAvailable ? 'draft' : 'noStorage');
-    if (state.page === 0) profilePage();
-    else if (stepFor() !== null) stepPage(routeFor(), stepFor());
-    else if (state.page === 5 || state.page === 10) explorePage(routeFor());
-    else comparisonPage();
-    if (state.page > 0) $('actions').append(button('← ' + t('back'), () => go(state.page - 1), 'ghost'));
-    const right = el('div', { className: 'action-right' });
-    if (state.page === 11) {
-      right.append(button(t('download'), download, 'secondary'));
-      if (cfg.endpoint) {
-        const b = button(t('submit'), submit); b.id = 'submit'; b.disabled = !!missingConfig().length; right.append(b);
+  }
+
+  function textField(name, label, value, placeholder, required) {
+    return `<label class="field form-card"><span>${esc(label)}${required ? ' <b class="required">*</b>' : ''}</span><input type="text" name="${name}" value="${esc(value)}" placeholder="${esc(placeholder)}" ${required ? 'required' : ''}></label>`;
+  }
+
+  function selectField(name, label, options, value, values = options, required = true) {
+    return `<label class="field form-card"><span>${esc(label)}${required ? ' <b class="required">*</b>' : ` <small>· ${esc(t('optionalField'))}</small>`}</span><select name="${name}" ${required ? 'required' : ''}><option value="">${esc(t('choose'))}</option>${options.map((opt, index) => `<option value="${esc(values[index])}" ${values[index] === value ? 'selected' : ''}>${esc(opt)}</option>`).join('')}</select></label>`;
+  }
+
+  function detectedItem(label, value, missing = false) {
+    return `<div class="detected-item${missing ? ' is-missing' : ''}"><span>${esc(label)}</span><strong>${esc(value)}</strong></div>`;
+  }
+
+  function environmentLabel(type, code) {
+    const codes = type === 'browser'
+      ? ['chrome', 'edge', 'safari', 'firefox', 'other']
+      : ['windows', 'mac', 'ios', 'android', 'other'];
+    const labels = type === 'browser' ? t('browsers') : t('devices');
+    if (code === 'unknown') return t('notDetected');
+    const index = codes.indexOf(code);
+    return index >= 0 ? labels[index] : labels[labels.length - 1];
+  }
+
+  function bindCommonFields() {
+    el.content.querySelectorAll('input[name], select[name], textarea[name]').forEach(input => {
+      input.addEventListener('change', handleFieldChange);
+      if (input.tagName === 'INPUT' && input.type === 'text' || input.tagName === 'TEXTAREA') input.addEventListener('input', handleFieldChange);
+    });
+  }
+
+  function handleFieldChange(event) {
+    const input = event.target;
+    const name = input.name;
+    if (Object.hasOwn(state.profile, name)) {
+      state.profile[name] = input.value.trimStart();
+      if (name === 'browser' || name === 'device') {
+        saveState();
+        render();
+        return;
       }
-    } else {
-      const label = state.page === 0 ? 'readyAction' : state.page === 5 ? 'toB' : state.page === 10 ? 'review' : 'next';
-      right.append(button(t(label) + ' →', () => {
-        if (state.page === 0 && !profileValid()) return;
-        const step = stepFor();
-        if (step !== null && state.routes[routeFor()].ratings[step] === null) { feedback(t('rateError')); return; }
-        go(state.page + 1);
-      }));
+    } else if (name === 'notes') {
+      state.comparison.notes = input.value;
+    } else if (name === 'faster' || name === 'problemRoute') {
+      state.comparison[name] = input.value;
+      if (name === 'problemRoute' && input.value === 'none') state.comparison.problemTypes = [];
+      if (name === 'problemRoute') {
+        saveState();
+        render();
+        return;
+      }
+    } else if (['differences', 'problemTypes', 'explored'].includes(name)) {
+      const values = [...el.content.querySelectorAll(`input[name="${name}"]:checked`)].map(node => node.value);
+      state.comparison[name] = enforceExclusive(name, values, input.value);
+      saveState();
+      render();
+      return;
     }
-    $('actions').append(right);
+    saveState();
   }
-  function reset() {
-    if (busy) return;
-    if (!succeeded && !window.confirm(t('clearConfirm'))) return;
-    const language = state.language;
-    state = fresh(); state.language = language;
-    succeeded = false;
-    try { sessionStorage.removeItem(storageKey); } catch { storageAvailable = false; }
-    go(0);
+
+  function enforceExclusive(name, values, changed) {
+    const exclusive = ['differences', 'explored'].includes(name) ? 'none' : '';
+    if (!exclusive) return values;
+    if (changed === exclusive && values.includes(exclusive)) return [exclusive];
+    return values.filter(v => v !== exclusive);
   }
-  $('clear').addEventListener('click', reset);
-  $('language').addEventListener('click', () => { if (busy) return; state.language = state.language === 'en' ? 'zh' : 'en'; save(); render(); });
-  render(); save();
+
+  function validateProfile(showError) {
+    const valid = Boolean(
+      String(state.profile.location || '').trim() &&
+      state.profile.browser !== 'unknown' &&
+      state.profile.device !== 'unknown'
+    );
+    if (!valid && showError) showFeedback(t('validation'));
+    return valid;
+  }
+
+  function renderRoute(route) {
+    const routeState = state.routes[route];
+    const url = cfg.routes?.[route] || '#';
+    const steps = t('steps');
+    el.content.innerHTML = `
+      <div class="route-header">
+        <div class="page-heading"><p class="overline">${esc(routeName(route))}</p><h1>${esc(interpolate(t('routeTitle'), { route: routeName(route) }))}</h1><p>${esc(interpolate(t('routeIntro'), { route: routeName(route) }))}</p></div>
+        <a class="route-open" href="${esc(url)}" target="_blank" rel="noopener noreferrer" data-open-route>${esc(interpolate(t('openRoute'), { route: routeName(route) }))} ↗</a>
+      </div>
+      <div class="notice notice-info"><strong>${esc(t('routeSafetyTitle'))}</strong><p>${esc(t('routeSafety'))}</p></div>
+      <div class="guide-list">${steps.map((step, index) => renderGuideStep(step, index, route)).join('')}</div>
+      <section class="ratings-panel">
+        <div class="ratings-head"><div><h2>${esc(t('ratingsTitle'))}</h2><p>${esc(t('ratingsIntro'))}</p></div></div>
+        ${steps.map((step, index) => renderRatingRow(route, stepTitle(step, route), index, routeState.ratings[index])).join('')}
+      </section>`;
+    el.actions.innerHTML = `
+      <button class="ghost-button back" type="button" data-back>${esc(t('back'))}</button>
+      <button class="primary-button" type="button" data-next>${esc(route === 'A' ? t('continueB') : t('continueCompare'))}</button>`;
+    el.content.querySelector('[data-open-route]').addEventListener('click', () => { state.routes[route].opened = true; saveState(); });
+    el.content.querySelectorAll(`input[name^="rating-${route}"]`).forEach(input => input.addEventListener('change', () => {
+      state.routes[route].ratings[Number(input.dataset.step)] = input.value;
+      saveState();
+      renderChrome();
+    }));
+    el.actions.querySelector('[data-back]').addEventListener('click', () => goTo(route === 'A' ? 0 : 1));
+    el.actions.querySelector('[data-next]').addEventListener('click', () => {
+      if (!state.routes[route].ratings.every(Boolean)) return showFeedback(t('validation'));
+      goTo(route === 'A' ? 2 : 3);
+    });
+  }
+
+  function stepTitle(step, route) {
+    return route === 'B' && step.titleB ? step.titleB : step.title;
+  }
+
+  function renderGuideStep(step, index, route) {
+    const bodyTemplate = route === 'B' && step.bodyB ? step.bodyB : step.body;
+    const actionTemplate = route === 'B' && step.actionB ? step.actionB : step.action;
+    const bullets = route === 'B' && step.bulletsB ? step.bulletsB : step.bullets;
+    const body = interpolate(bodyTemplate, { flowspace: cfg.flowSpace || 'TFG S&E Audit' });
+    const action = interpolate(actionTemplate, { flowspace: cfg.flowSpace || 'TFG S&E Audit' });
+    return `<article class="guide-step${index === 3 ? ' optional' : ''}" data-step="${index + 1}">
+      <span class="step-number">${index + 1}</span>
+      <div class="step-copy"><h3>${esc(stepTitle(step, route))} <span class="tag">${esc(index === 3 ? t('stepOptional') : t('required'))}</span></h3><div class="step-action"><span>${esc(t('actionLabel'))}</span><strong>${esc(action)}</strong></div><p>${esc(body)}</p><ul>${bullets.map(item => `<li>${esc(item)}</li>`).join('')}</ul></div>
+      ${renderVisual(index, route)}
+    </article>`;
+  }
+
+  function renderVisual(index, route) {
+    const imageKeys = ['login', 'orders', 'detail', 'workOrder'];
+    const image = cfg.screenshots?.[imageKeys[index]];
+    if (image) return `<div class="visual-wrap"><div class="guide-visual guide-visual-image"><img src="${esc(image)}" alt="${esc(t('guideLabel'))}"></div><div class="visual-caption">${esc(t('guideCaption'))}</div></div>`;
+
+    const marker = number => `<span class="click-marker" aria-hidden="true">${number}</span>`;
+    const flowSpace = cfg.flowSpace || 'TFG S&E Audit';
+    const appRail = `<div class="shot-app-rail"><b>TFG</b><i></i><i></i><i></i></div>`;
+    const orderNav = highlight => `<div class="shot-order-nav"><strong>Dashboard</strong><span>Monthly Feedback</span><span>Realtime Feedback</span><strong>Order List</strong><span class="is-selected${highlight ? ' target-box' : ''}">Default View${highlight ? marker(1) : ''}</span><span>China Factory list</span><span>Continue to use</span></div>`;
+    let visual = '';
+
+    if (index === 0) {
+      visual = `<div class="visual-scene visual-login-scene">
+        <div class="shot-card shot-login">
+          <div class="shot-login-art"><i></i><i></i><i></i></div>
+          <div class="shot-login-form"><div class="mini-brand"><span></span>Linkincrease</div><b>Password Login</b><small>Email</small><div class="mini-input"></div><small>Password</small><div class="mini-input"></div><div class="mini-button target-box">${esc(t('visualLogin'))}${marker(1)}</div></div>
+        </div>
+        <span class="scene-arrow" aria-hidden="true">→</span>
+        <div class="shot-card shot-workspace">
+          <div class="shot-workspace-top"><b>Workspace</b><span></span><span></span></div>
+          <div class="shot-workspace-body"><div class="shot-calendar"></div><div class="shot-summary"><i></i><i></i></div><div class="shot-fs-area"><small>FlowSpace</small><div class="workspace-card target-box"><b>${esc(flowSpace)}</b><span>Orders</span>${marker(2)}</div></div></div>
+        </div>
+      </div>`;
+    } else if (index === 1) {
+      visual = `<div class="visual-scene visual-orders-scene">
+        ${appRail}
+        ${orderNav(true)}
+        <div class="shot-table-panel"><div class="shot-table-tools"><span></span><span></span><span></span></div><div class="shot-table-head"><b>Order Code</b><b>Order ID</b><b>Status</b></div><div class="shot-table-row"><span></span><span></span><i></i></div><div class="shot-table-row"><span></span><span></span><i></i></div><div class="shot-table-row"><span></span><span></span><i></i></div><div class="shot-table-row"><span></span><span></span><i></i></div></div>
+      </div>`;
+    } else if (index === 2) {
+      visual = `<div class="visual-scene visual-search-scene">
+        ${appRail}${orderNav(false)}
+        <div class="shot-search-main"><div class="shot-search-tools"><div class="mini-search${route === 'B' ? ' target-box' : ''}"><span aria-hidden="true">⌕</span>${esc(route === 'B' ? t('visualSameOrder') : 'Search')}${route === 'B' ? marker(1) : ''}</div><b>Export</b><b>Filter</b></div><div class="shot-table-head"><b>Order Code</b><b>Order ID</b><b>Status</b></div><div class="mini-result target-box"><span class="row-check"></span><b>${esc(route === 'B' ? 'Same order' : t('visualChooseOrder'))}</b><span class="row-status">In Progress</span>${marker(route === 'B' ? 2 : 1)}</div><div class="mini-row-faint"></div></div>
+      </div>`;
+    } else {
+      visual = `<div class="visual-scene visual-workorder-scene">
+        ${appRail}
+        <div class="shot-detail-nav"><b>Order detail</b><span class="is-selected">Overview</span><span>Milestones</span><span>Documents</span><span>Activity</span></div>
+        <div class="shot-detail-main"><div class="shot-detail-title"><b>Order</b><span>In Progress</span></div><div class="detail-tabs"><span class="active">Overview</span><span>Timeline</span><span>Files</span></div><div class="detail-summary"><i></i><i></i><i></i></div><small>Work orders</small><div class="workorder-card target-box"><span class="workorder-icon">✓</span><b>${esc(t('visualWorkOrder'))}</b><span aria-hidden="true">›</span>${marker(1)}</div></div>
+      </div>`;
+    }
+
+    return `<div class="visual-wrap"><div class="guide-visual" role="img" aria-label="${esc(t('guideCaption'))}"><div class="visual-browser-bar"><span></span><span></span><span></span><b>${esc(t('visualClick'))}</b></div>${visual}</div><div class="visual-caption">${esc(t('guideCaption'))}</div></div>`;
+  }
+
+  function renderRatingRow(route, title, index, value) {
+    return `<div class="rating-row"><div class="rating-title"><strong>${index + 1}. ${esc(title)}</strong><small>${index === 3 ? esc(t('stepOptional')) : esc(t('required'))}</small></div><div class="rating-options">${t('ratingNames').map((label, i) => {
+      const score = String(i + 1);
+      return `<span class="choice"><input type="radio" id="rating-${route}-${index}-${score}" name="rating-${route}-${index}" data-step="${index}" value="${score}" ${value === score ? 'checked' : ''}><label for="rating-${route}-${index}-${score}">${esc(label)}</label></span>`;
+    }).join('')}</div></div>`;
+  }
+
+  function renderCompare() {
+    const c = state.comparison;
+    const hasProblem = c.problemRoute && c.problemRoute !== 'none';
+    el.content.innerHTML = `
+      <div class="page-heading"><p class="overline">${esc(t('stages')[3][0])}</p><h1>${esc(t('compareTitle'))}</h1><p>${esc(t('compareIntro'))}</p></div>
+      <div class="summary-grid">
+        ${renderSummary('A')}${renderSummary('B')}
+      </div>
+      <div class="comparison-grid" style="margin-top:18px">
+        ${radioQuestion('faster', t('fasterTitle'), t('fasterOptions'), c.faster, ['A', 'B', 'same', 'unsure'])}
+        ${checkboxQuestion('differences', t('differencesTitle'), t('differenceOptions'), c.differences, ['login', 'orders', 'detail', 'workOrder', 'none'])}
+        ${radioQuestion('problemRoute', t('problemRouteTitle'), t('problemRouteOptions'), c.problemRoute, ['A', 'B', 'both', 'none'])}
+        ${hasProblem ? checkboxQuestion('problemTypes', t('problemTypeTitle'), t('problemTypeOptions'), c.problemTypes, ['slow', 'loading', 'noOpen', 'disconnect', 'other']) : `<article class="question-card"><h3>${esc(t('problemTypeTitle'))}</h3><p>${state.language === 'zh' ? '选择遇到问题的线路后显示。' : 'Shown after you select a route with a problem.'}</p></article>`}
+      </div>
+      <details class="collapsible" ${c.explored.length ? 'open' : ''}><summary>${esc(t('exploreTitle'))}</summary><div class="collapsible-body"><p>${esc(t('exploreHelp'))}</p>${checkboxOptions('explored', t('exploreOptions'), c.explored, ['home', 'documents', 'search', 'other', 'none'])}</div></details>
+      <label class="field" style="margin-top:18px"><span>${esc(t('notes'))} · ${esc(t('optional'))}</span><textarea name="notes" placeholder="${esc(t('notesPlaceholder'))}">${esc(c.notes)}</textarea></label>
+      ${cfg.privacyNotice?.[state.language] ? `<div class="notice notice-info" style="margin-top:18px"><strong>${state.language === 'zh' ? '数据使用说明' : 'How your feedback is used'}</strong><p>${esc(cfg.privacyNotice[state.language])}</p>${cfg.contact ? `<p>${state.language === 'zh' ? '联系' : 'Contact'}: ${esc(cfg.contact)}</p>` : ''}</div>` : ''}`;
+    el.actions.innerHTML = `<button class="ghost-button back" type="button" data-back>${esc(t('back'))}</button><button class="primary-button" type="button" data-submit>${esc(t('submit'))}</button>`;
+    el.actions.querySelector('[data-back]').addEventListener('click', () => goTo(2));
+    el.actions.querySelector('[data-submit]').addEventListener('click', submit);
+  }
+
+  function renderSummary(route) {
+    const values = state.routes[route].ratings;
+    return `<article class="summary-card"><h3>${esc(interpolate(t('routeSummary'), { route: routeName(route) }))}</h3><p>${esc(cfg.routes?.[route] || '')}</p><div class="summary-score">${values.map((value, index) => `<span class="score-pill">${index + 1}: ${value ? esc(t('ratingNames')[Number(value) - 1]) : esc(t('notRated'))}</span>`).join('')}</div></article>`;
+  }
+
+  function radioQuestion(name, title, options, selected, values = options) {
+    return `<fieldset class="question-card"><legend>${esc(title)} <b class="required">*</b></legend><div class="option-grid">${options.map((label, index) => `<span class="option-card"><input type="radio" id="${name}-${slug(values[index])}" name="${name}" value="${esc(values[index])}" ${selected === values[index] ? 'checked' : ''}><label for="${name}-${slug(values[index])}">${esc(label)}</label></span>`).join('')}</div></fieldset>`;
+  }
+
+  function checkboxQuestion(name, title, options, selected, values = options) {
+    return `<fieldset class="question-card"><legend>${esc(title)} <b class="required">*</b></legend>${checkboxOptions(name, options, selected, values)}</fieldset>`;
+  }
+
+  function checkboxOptions(name, options, selected, values = options) {
+    return `<div class="option-grid">${options.map((label, index) => `<span class="option-card checkbox"><input type="checkbox" id="${name}-${slug(values[index])}" name="${name}" value="${esc(values[index])}" ${selected.includes(values[index]) ? 'checked' : ''}><label for="${name}-${slug(values[index])}">${esc(label)}</label></span>`).join('')}</div>`;
+  }
+
+  function slug(value) { return encodeURIComponent(value).replaceAll('%', '').toLowerCase(); }
+
+  function validateCompare() {
+    const c = state.comparison;
+    const hasProblem = c.problemRoute && c.problemRoute !== 'none';
+    return Boolean(c.faster && c.differences.length && c.problemRoute && (!hasProblem || c.problemTypes.length));
+  }
+
+  async function submit() {
+    if (isSubmitting) return;
+    if (!validateProfile(false) || !state.routes.A.ratings.every(Boolean) || !state.routes.B.ratings.every(Boolean) || !validateCompare()) return showFeedback(t('validation'));
+    const payload = buildPayload();
+    if (!cfg.endpoint) {
+      if (REVIEW_MODE) downloadPayload(payload);
+      state.previewComplete = true;
+      saveState();
+      render();
+      return;
+    }
+    isSubmitting = true;
+    const button = el.actions.querySelector('[data-submit]');
+    button.disabled = true;
+    button.textContent = t('submitting');
+    try {
+      const response = await fetch(cfg.endpoint, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        credentials: 'omit', body: JSON.stringify(payload)
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok || result?.code !== 0 || result?.data?.submissionId !== state.submissionId) throw new Error('Unconfirmed response');
+      state.completed = true;
+      saveState();
+      render();
+    } catch (_) {
+      showFeedback(t('submitError'));
+      button.disabled = false;
+      button.textContent = t('submit');
+    } finally {
+      isSubmitting = false;
+    }
+  }
+
+  function buildPayload() {
+    return {
+      surveyId: cfg.surveyId || 'trade-access-feedback-v2',
+      submissionId: state.submissionId,
+      submittedAtClient: new Date().toISOString(),
+      language: state.language,
+      profile: { ...state.profile },
+      testContext: {
+        flowSpace: cfg.flowSpace || 'TFG S&E Audit', orderNumber: cfg.orderNumber || '',
+        routes: { A: cfg.routes?.A || '', B: cfg.routes?.B || '' }
+      },
+      routeResults: {
+        A: { opened: state.routes.A.opened, ratings: [...state.routes.A.ratings] },
+        B: { opened: state.routes.B.opened, ratings: [...state.routes.B.ratings] }
+      },
+      comparison: { ...state.comparison }
+    };
+  }
+
+  function downloadPayload(payload) {
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = `linkincrease-route-test-${state.submissionId}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 1000);
+  }
+
+  function renderSuccess() {
+    const preview = state.previewComplete && !state.completed;
+    el.setupWarning.hidden = true;
+    el.content.innerHTML = `<section class="success-view"><span class="success-icon">✓</span><h1>${esc(preview ? t('previewSuccessTitle') : t('successTitle'))}</h1><p>${esc(preview ? t('previewSuccessBody') : t('successBody'))}</p>${REVIEW_MODE ? `<div class="success-actions">${preview ? `<button class="secondary-button" type="button" data-download>${esc(t('downloadAgain'))}</button>` : ''}<button class="primary-button" type="button" data-restart>${esc(t('restart'))}</button></div>` : ''}</section>`;
+    el.actions.innerHTML = '';
+    const download = el.content.querySelector('[data-download]');
+    if (download) download.addEventListener('click', () => downloadPayload(buildPayload()));
+    const restart = el.content.querySelector('[data-restart]');
+    if (restart) restart.addEventListener('click', resetState);
+  }
+
+  function goTo(page) {
+    state.page = page;
+    state.maxPage = Math.max(state.maxPage, page);
+    saveState();
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    document.querySelector('#main').focus({ preventScroll: true });
+  }
+
+  function showFeedback(message) {
+    el.feedback.textContent = message;
+    el.feedback.hidden = false;
+    el.feedback.focus();
+  }
+
+  function clearFeedback() { el.feedback.hidden = true; el.feedback.textContent = ''; }
+
+  function resetState() {
+    state = defaultState();
+    localStorage.removeItem(STORAGE_KEY);
+    render();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  el.language.addEventListener('click', () => {
+    state.language = state.language === 'en' ? 'zh' : 'en';
+    saveState();
+    render();
+  });
+
+  el.clear.addEventListener('click', () => {
+    if (window.confirm(t('clearConfirm'))) resetState();
+  });
+
+  render();
 })();

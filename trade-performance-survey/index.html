@@ -6,45 +6,58 @@
   <meta name="referrer" content="no-referrer">
   <meta name="robots" content="noindex, nofollow">
   <meta name="color-scheme" content="light">
-  <title>Linkincrease · Access experience survey</title>
-  <link rel="stylesheet" href="./styles.css">
-  <script src="./config.js" defer></script>
-  <script src="./app.js" defer></script>
+  <title>Linkincrease · Access route test</title>
+  <link rel="stylesheet" href="./styles.css?v=25">
+  <script src="./config.js?v=25" defer></script>
+  <script src="./app.js?v=25" defer></script>
 </head>
 <body>
-  <a class="skip-link" href="#main">Skip to questionnaire / 跳到问卷</a>
+  <a class="skip-link" href="#main">Skip to the test guide</a>
+
   <header class="topbar">
-    <a class="brand" href="./" aria-label="Linkincrease home"><span class="brand-mark" aria-hidden="true">L</span><span>Linkincrease<span class="brand-sub">EXPERIENCE LAB</span></span></a>
-    <div class="header-actions"><span class="privacy-badge" id="header-note"></span><button id="language" class="language-button" type="button">中文</button></div>
+    <a class="brand" href="./" aria-label="Linkincrease access route test">
+      <span class="brand-logo" aria-hidden="true"></span>
+      <span class="sr-only">Linkincrease</span>
+    </a>
+    <div class="header-actions">
+      <span class="header-note" id="header-note"></span>
+      <button id="language" class="language-button" type="button">中文</button>
+    </div>
   </header>
+
   <div class="workspace">
     <aside class="sidebar">
       <p class="eyebrow" id="nav-eyebrow"></p>
       <h2 id="nav-title"></h2>
       <p class="nav-description" id="nav-description"></p>
-      <nav id="navigation" aria-label="Survey sections"></nav>
-      <div class="sidebar-note"><span class="small-dot"></span><p id="sidebar-note"></p></div>
+      <nav id="navigation" aria-label="Test stages"></nav>
+      <div class="sidebar-note">
+        <span class="small-dot" aria-hidden="true"></span>
+        <p id="sidebar-note"></p>
+      </div>
     </aside>
+
     <main id="main" tabindex="-1">
-      <div id="setup-warning" class="notice" hidden></div>
-      <div class="progress-meta"><span id="section-label"></span><span id="progress-label"></span></div>
-      <div class="progress-track" role="progressbar" aria-label="Rated steps" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0"><div id="progress-fill"></div></div>
+      <div class="progress-sticky">
+        <div class="stage-meta">
+          <span id="section-label"></span>
+          <span id="progress-label"></span>
+        </div>
+        <div class="progress-track" role="progressbar" aria-label="Rated test steps" aria-valuemin="0" aria-valuemax="8" aria-valuenow="0">
+          <div id="progress-fill"></div>
+        </div>
+      </div>
+      <div id="setup-warning" class="notice notice-warning" hidden></div>
       <div id="content"></div>
       <div id="feedback" class="feedback" role="alert" tabindex="-1" hidden></div>
       <div id="actions" class="actions"></div>
-      <footer class="page-footer"><span id="draft-status" role="status" aria-live="polite"></span><button type="button" id="clear" class="text-button"></button></footer>
-      <details id="integration" class="integration" hidden>
-        <summary>Template setup / 模板接入说明</summary>
-        <p>将本目录文件放到 GitHub Pages 发布根目录，编辑 <code>config.js</code> 的 <code>endpoint</code> 为真实 HTTPS 接口；再填写联系人、指定订单、采集告知、页面离开规则。截图路径留空时使用示意图；请只放脱敏后的图片。</p>
-        <p>请求：<code>POST application/json</code>，不携带 Cookie 或认证信息。后端校验参数、保存数据，以 <code>submissionId</code> 去重；后端记录接收时间。只有后端明确确认保存，页面才显示成功。</p>
-        <pre>HTTP 200
-{"code":0,"data":{"submissionId":"与请求中的 submissionId 一致"}}</pre>
-        <p>跨域接口需正确处理 <code>OPTIONS</code>，允许实际 Pages Origin、<code>POST</code> 和 <code>Content-Type</code>。CORS 不是权限控制。前端限制不能替代后端校验；接口未实现，模板不创建数据库。</p>
-        <p>发布前本地测试：<code>python3 -m http.server 8080 --bind 127.0.0.1</code>。未配置接口时不会发请求；下载 JSON 可查看真实请求结构。到期后关闭后端接收并下线页面。</p>
-        <p>本模板不加载第三方脚本、统计服务或字体，不实现业务系统计时。业务页面在新标签页打开，用户需返回本页评价，网页无法跨域检测业务步骤是否完成。</p>
-      </details>
+      <footer class="page-footer">
+        <span id="draft-status" role="status" aria-live="polite"></span>
+        <button type="button" id="clear" class="text-button"></button>
+      </footer>
     </main>
   </div>
-  <noscript><p class="notice">Please enable JavaScript to complete this survey. 请启用 JavaScript 后填写问卷。</p></noscript>
+
+  <noscript><p class="notice">Please enable JavaScript to complete this test. 请启用 JavaScript 后继续。</p></noscript>
 </body>
 </html>
