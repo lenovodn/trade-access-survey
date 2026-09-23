@@ -19,6 +19,15 @@
         ['Route B', 'Test second'],
         ['Compare & send', 'About 2 min']
       ],
+      stageComplete: 'Complete',
+      stagePending: 'Needs attention',
+      missingFields: 'Missing: {fields}',
+      routeRatingProgress: '{done} of 4 action ratings completed',
+      comparisonPending: 'Required comparison questions are incomplete',
+      prerequisiteTitle: 'Complete these earlier stages before submitting',
+      prerequisiteIntro: 'Your answers on this page are saved. Choose an unfinished stage below and complete its required items.',
+      completeStage: 'Complete stage',
+      incompleteFeedback: 'Required items are still missing in: {stages}. Choose the highlighted stage to complete them.',
       stage: 'Stage',
       rated: 'rated steps',
       clear: 'Clear draft',
@@ -165,6 +174,11 @@
       navDescription: '按顺序完成 4 个阶段，进度会保存在当前设备。',
       sidebarNote: '两条线路请使用同一设备、浏览器、账号和网络。',
       stages: [['准备', '约 1 分钟'], ['线路 A', '先测试'], ['线路 B', '后测试'], ['对比并提交', '约 2 分钟']],
+      stageComplete: '已完成', stagePending: '待完成', missingFields: '缺少：{fields}',
+      routeRatingProgress: '已评价 {done} / 4 个操作', comparisonPending: '本页必填问题尚未完成',
+      prerequisiteTitle: '提交前，请先完成以下阶段',
+      prerequisiteIntro: '当前页面的答案会自动保存。点击未完成阶段，即可直接返回补充必填内容。',
+      completeStage: '去完成', incompleteFeedback: '以下阶段仍有必填内容未完成：{stages}。请点击高亮阶段补充。',
       stage: '阶段', rated: '个步骤已评价', clear: '清除草稿', saved: '草稿已保存在当前设备',
       previewWarningTitle: '当前为评审模式',
       previewWarning: '页面可以完整体验，但发布配置补齐前不会发送数据。',
@@ -376,10 +390,11 @@
   function renderNavigation() {
     el.navigation.innerHTML = t('stages').map((item, index) => {
       const complete = isStageComplete(index);
-      return `<button class="nav-item${state.page === index ? ' active' : ''}${complete ? ' complete' : ''}" type="button" data-nav="${index}" ${state.completed ? 'disabled' : ''} aria-current="${state.page === index ? 'step' : 'false'}">
+      const needsAttention = state.page === 3 && index < 3 && !complete;
+      return `<button class="nav-item${state.page === index ? ' active' : ''}${complete ? ' complete' : ''}${needsAttention ? ' needs-attention' : ''}" type="button" data-nav="${index}" ${state.completed ? 'disabled' : ''} aria-current="${state.page === index ? 'step' : 'false'}">
         <span class="nav-index">${complete ? '✓' : index + 1}</span>
         <span class="nav-copy"><strong>${esc(item[0])}</strong><small>${esc(item[1])}</small></span>
-        <span class="nav-arrow" aria-hidden="true">›</span>
+        <span class="nav-trailing"><span class="nav-status">${esc(complete ? t('stageComplete') : t('stagePending'))}</span><span class="nav-arrow" aria-hidden="true">›</span></span>
       </button>`;
     }).join('');
     el.navigation.querySelectorAll('[data-nav]').forEach(button => button.addEventListener('click', () => {
@@ -396,7 +411,41 @@
     if (index === 0) return validateProfile(false);
     if (index === 1) return state.routes.A.ratings.every(Boolean);
     if (index === 2) return state.routes.B.ratings.every(Boolean);
-    return state.completed || state.previewComplete;
+    return validateCompare() || state.completed || state.previewComplete;
+  }
+
+  function getStageDetail(index) {
+    if (index === 0) {
+      const missing = [];
+      if (!String(state.profile.location || '').trim()) missing.push(state.profile.country ? t('location') : t('locationCountry'));
+      if (state.profile.browser === 'unknown') missing.push(t('browser'));
+      if (state.profile.device === 'unknown') missing.push(t('device'));
+      return missing.length ? interpolate(t('missingFields'), { fields: missing.join(state.language === 'zh' ? '、' : ', ') }) : t('stageComplete');
+    }
+    if (index === 1 || index === 2) {
+      const route = index === 1 ? 'A' : 'B';
+      const done = state.routes[route].ratings.filter(Boolean).length;
+      return done === 4 ? t('stageComplete') : interpolate(t('routeRatingProgress'), { done });
+    }
+    return validateCompare() ? t('stageComplete') : t('comparisonPending');
+  }
+
+  function getIncompleteStages() {
+    return t('stages').map((item, index) => ({
+      index,
+      title: item[0],
+      detail: getStageDetail(index),
+      complete: isStageComplete(index)
+    })).filter(item => !item.complete);
+  }
+
+  function renderPrerequisiteNotice() {
+    const missing = getIncompleteStages().filter(item => item.index < 3);
+    if (!missing.length) return '';
+    return `<section class="prerequisite-notice" aria-labelledby="prerequisite-title">
+      <div class="prerequisite-heading"><span aria-hidden="true">!</span><div><h2 id="prerequisite-title">${esc(t('prerequisiteTitle'))}</h2><p>${esc(t('prerequisiteIntro'))}</p></div></div>
+      <div class="prerequisite-list">${missing.map(item => `<button type="button" class="prerequisite-item" data-go-stage="${item.index}"><span class="prerequisite-index">${item.index + 1}</span><span class="prerequisite-copy"><strong>${esc(item.title)}</strong><small>${esc(item.detail)}</small></span><span class="prerequisite-action">${esc(t('completeStage'))} →</span></button>`).join('')}</div>
+    </section>`;
   }
 
   function renderSetupWarning() {
@@ -653,6 +702,7 @@
     const hasProblem = c.problemRoute && c.problemRoute !== 'none';
     el.content.innerHTML = `
       <div class="page-heading"><p class="overline">${esc(t('stages')[3][0])}</p><h1>${esc(t('compareTitle'))}</h1><p>${esc(t('compareIntro'))}</p></div>
+      ${renderPrerequisiteNotice()}
       <div class="summary-grid">
         ${renderSummary('A')}${renderSummary('B')}
       </div>
@@ -668,6 +718,7 @@
     el.actions.innerHTML = `<button class="ghost-button back" type="button" data-back>${esc(t('back'))}</button><button class="primary-button" type="button" data-submit>${esc(t('submit'))}</button>`;
     el.actions.querySelector('[data-back]').addEventListener('click', () => goTo(2));
     el.actions.querySelector('[data-submit]').addEventListener('click', submit);
+    el.content.querySelectorAll('[data-go-stage]').forEach(button => button.addEventListener('click', () => goTo(Number(button.dataset.goStage))));
   }
 
   function renderSummary(route) {
@@ -697,7 +748,14 @@
 
   async function submit() {
     if (isSubmitting) return;
-    if (!validateProfile(false) || !state.routes.A.ratings.every(Boolean) || !state.routes.B.ratings.every(Boolean) || !validateCompare()) return showFeedback(t('validation'));
+    const incomplete = getIncompleteStages();
+    if (incomplete.length) {
+      renderNavigation();
+      showFeedback(interpolate(t('incompleteFeedback'), { stages: incomplete.map(item => item.title).join(state.language === 'zh' ? '、' : ', ') }));
+      const prerequisite = el.content.querySelector('.prerequisite-notice');
+      if (prerequisite) prerequisite.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      return;
+    }
     const payload = buildPayload();
     if (!cfg.endpoint) {
       if (REVIEW_MODE) downloadPayload(payload);
