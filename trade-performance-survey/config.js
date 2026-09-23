@@ -1,5 +1,5 @@
 window.SURVEY_CONFIG = Object.freeze({
-  endpoint: '',
+  endpoint: 'https://tradepro-api.linkincrease.com/trade-api/trade/survey-feedback/submit',
   surveyId: 'trade-access-feedback-v4',
   defaultLanguage: 'en',
   flowSpace: 'TFG S&E Audit',
