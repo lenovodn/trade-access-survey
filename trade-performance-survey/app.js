@@ -555,6 +555,7 @@
 
   function handleFieldChange(event) {
     const input = event.target;
+    clearValidationAttention(input);
     const name = input.name;
     if (Object.hasOwn(state.profile, name)) {
       state.profile[name] = input.value.trimStart();
@@ -596,7 +597,14 @@
       state.profile.browser !== 'unknown' &&
       state.profile.device !== 'unknown'
     );
-    if (!valid && showError) showFeedback(t('validation'));
+    if (!valid && showError) {
+      showFeedback(t('validation'), false);
+      const missing = [];
+      if (!String(state.profile.location || '').trim()) missing.push(el.content.querySelector('[name="location"]')?.closest('.form-card'));
+      if (state.profile.browser === 'unknown') missing.push(el.content.querySelector('[name="browser"]')?.closest('.form-card'));
+      if (state.profile.device === 'unknown') missing.push(el.content.querySelector('[name="device"]')?.closest('.form-card'));
+      pulseValidationTargets(missing);
+    }
     return valid;
   }
 
@@ -620,13 +628,21 @@
       <button class="primary-button" type="button" data-next>${esc(route === 'A' ? t('continueB') : t('continueCompare'))}</button>`;
     el.content.querySelector('[data-open-route]').addEventListener('click', () => { state.routes[route].opened = true; saveState(); });
     el.content.querySelectorAll(`input[name^="rating-${route}"]`).forEach(input => input.addEventListener('change', () => {
+      clearValidationAttention(input);
       state.routes[route].ratings[Number(input.dataset.step)] = input.value;
       saveState();
       renderChrome();
     }));
     el.actions.querySelector('[data-back]').addEventListener('click', () => goTo(route === 'A' ? 0 : 1));
     el.actions.querySelector('[data-next]').addEventListener('click', () => {
-      if (!state.routes[route].ratings.every(Boolean)) return showFeedback(t('validation'));
+      const missing = state.routes[route].ratings
+        .map((value, index) => value ? null : el.content.querySelector(`[data-rating-step="${index}"]`))
+        .filter(Boolean);
+      if (missing.length) {
+        showFeedback(t('validation'), false);
+        pulseValidationTargets(missing);
+        return;
+      }
       goTo(route === 'A' ? 2 : 3);
     });
   }
@@ -695,7 +711,7 @@
   }
 
   function renderRatingRow(route, title, index, value) {
-    return `<div class="rating-row"><div class="rating-title"><strong>${index + 1}. ${esc(title)}</strong><small>${index === 3 ? esc(t('stepOptional')) : esc(t('required'))}</small></div><div class="rating-options">${t('ratingNames').map((label, i) => {
+    return `<div class="rating-row" data-rating-step="${index}"><div class="rating-title"><strong>${index + 1}. ${esc(title)}</strong><small>${index === 3 ? esc(t('stepOptional')) : esc(t('required'))}</small></div><div class="rating-options">${t('ratingNames').map((label, i) => {
       const score = String(i + 1);
       return `<span class="choice"><input type="radio" id="rating-${route}-${index}-${score}" name="rating-${route}-${index}" data-step="${index}" value="${score}" ${value === score ? 'checked' : ''}><label for="rating-${route}-${index}-${score}">${esc(label)}</label></span>`;
     }).join('')}</div></div>`;
@@ -732,11 +748,11 @@
   }
 
   function radioQuestion(name, title, options, selected, values = options) {
-    return `<fieldset class="question-card"><legend>${esc(title)} <b class="required">*</b></legend><div class="option-grid">${options.map((label, index) => `<span class="option-card"><input type="radio" id="${name}-${slug(values[index])}" name="${name}" value="${esc(values[index])}" ${selected === values[index] ? 'checked' : ''}><label for="${name}-${slug(values[index])}">${esc(label)}</label></span>`).join('')}</div></fieldset>`;
+    return `<fieldset class="question-card" data-question="${name}"><legend>${esc(title)} <b class="required">*</b></legend><div class="option-grid">${options.map((label, index) => `<span class="option-card"><input type="radio" id="${name}-${slug(values[index])}" name="${name}" value="${esc(values[index])}" ${selected === values[index] ? 'checked' : ''}><label for="${name}-${slug(values[index])}">${esc(label)}</label></span>`).join('')}</div></fieldset>`;
   }
 
   function checkboxQuestion(name, title, options, selected, values = options) {
-    return `<fieldset class="question-card"><legend>${esc(title)} <b class="required">*</b></legend>${checkboxOptions(name, options, selected, values)}</fieldset>`;
+    return `<fieldset class="question-card" data-question="${name}"><legend>${esc(title)} <b class="required">*</b></legend>${checkboxOptions(name, options, selected, values)}</fieldset>`;
   }
 
   function checkboxOptions(name, options, selected, values = options) {
@@ -751,14 +767,25 @@
     return Boolean(c.faster && c.differences.length && c.problemRoute && (!hasProblem || c.problemTypes.length));
   }
 
+  function getMissingCompareTargets() {
+    const c = state.comparison;
+    const names = [];
+    if (!c.faster) names.push('faster');
+    if (!c.differences.length) names.push('differences');
+    if (!c.problemRoute) names.push('problemRoute');
+    if (c.problemRoute && c.problemRoute !== 'none' && !c.problemTypes.length) names.push('problemTypes');
+    return names.map(name => el.content.querySelector(`[data-question="${name}"]`)).filter(Boolean);
+  }
+
   async function submit() {
     if (isSubmitting) return;
     const incomplete = getIncompleteStages();
     if (incomplete.length) {
       renderNavigation();
-      showFeedback(interpolate(t('incompleteFeedback'), { stages: incomplete.map(item => item.title).join(state.language === 'zh' ? '、' : ', ') }));
+      showFeedback(interpolate(t('incompleteFeedback'), { stages: incomplete.map(item => item.title).join(state.language === 'zh' ? '、' : ', ') }), false);
+      const missingCompareTargets = getMissingCompareTargets();
       const prerequisite = el.content.querySelector('.prerequisite-notice');
-      if (prerequisite) prerequisite.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      pulseValidationTargets(missingCompareTargets.length ? missingCompareTargets : (prerequisite ? [prerequisite] : []));
       return;
     }
     const payload = buildPayload();
@@ -842,10 +869,32 @@
     document.querySelector('#main').focus({ preventScroll: true });
   }
 
-  function showFeedback(message) {
+  function clearValidationAttention(input) {
+    const target = input.closest('.form-card, .rating-row, .question-card');
+    if (!target) return;
+    target.classList.remove('validation-attention');
+    target.removeAttribute('aria-invalid');
+    target.querySelectorAll('input, select, textarea').forEach(field => field.removeAttribute('aria-invalid'));
+  }
+
+  function pulseValidationTargets(targets) {
+    const items = targets.filter(Boolean);
+    if (!items.length) return;
+    items.forEach(target => {
+      target.classList.remove('validation-attention');
+      void target.offsetWidth;
+      target.classList.add('validation-attention');
+      target.setAttribute('aria-invalid', 'true');
+      target.querySelectorAll('input, select, textarea').forEach(field => field.setAttribute('aria-invalid', 'true'));
+    });
+    const first = items[0];
+    first.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'center' });
+  }
+
+  function showFeedback(message, focus = true) {
     el.feedback.textContent = message;
     el.feedback.hidden = false;
-    el.feedback.focus();
+    if (focus) el.feedback.focus();
   }
 
   function clearFeedback() { el.feedback.hidden = true; el.feedback.textContent = ''; }
