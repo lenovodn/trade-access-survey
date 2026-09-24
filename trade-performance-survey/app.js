@@ -119,11 +119,11 @@
         {
           title: 'Open and remember one order',
           titleB: 'Open the same order',
-          action: 'Choose any order → remember its order number → open it',
-          actionB: 'Search for the same order from Route A → open it',
-          body: 'Remember this order; you will open it again on Route B.',
-          bodyB: 'Open the exact same order you used on Route A.',
-          bullets: ['You may note the order number if that helps.'],
+          action: 'Choose any order → remember its Order ID → open it',
+          actionB: 'Search for the same Order ID from Route A → open it',
+          body: 'Remember this Order ID; you will use it again on Route B.',
+          bodyB: 'Open the order with the same Order ID you used on Route A.',
+          bullets: ['You may note the Order ID if that helps.'],
           bulletsB: ['Wait until the main order information is visible.']
         },
         {
@@ -209,7 +209,7 @@
       steps: [
         { title: '登录并进入工作空间', action: '登录 → 打开“{flowspace}”', body: '等待工作空间页面显示完成后再继续。', bullets: ['完成 4 个操作前，请保持当前线路页面打开。'] },
         { title: '打开默认订单列表', action: '进入订单列表 → 点击默认视图', body: '看到订单列表后继续下一步。', bullets: ['请不要反复刷新页面。'] },
-        { title: '打开并记住一个订单', titleB: '打开与线路 A 相同的订单', action: '任选一个订单 → 记住订单编号 → 打开详情', actionB: '搜索线路 A 的同一订单 → 打开详情', body: '请记住这个订单，线路 B 还需要再次打开。', bodyB: '请打开在线路 A 中使用的同一个订单。', bullets: ['如有需要，可以记一下订单号。'], bulletsB: ['等待订单主要信息显示完成。'] },
+        { title: '打开并记住一个订单', titleB: '打开与线路 A 相同的订单', action: '任选一个订单 → 记住 Order ID → 打开详情', actionB: '搜索线路 A 记录的同一 Order ID → 打开详情', body: '请记住这个 Order ID，线路 B 还需要再次使用。', bodyB: '请打开与线路 A 的 Order ID 相同的订单。', bullets: ['如有需要，可以记一下 Order ID。'], bulletsB: ['等待订单主要信息显示完成。'] },
         { title: '查看工作单区域', action: '在订单详情页向下滚动 → 查看“Work orders”区域', body: '这一步为选做；如果没有该区域或没有工作单，请在下方选择“未尝试”。', bullets: ['无需打开或操作工作单。'] }
       ],
       ratingsTitle: '这 4 个操作感觉如何？', ratingsIntro: '选择最接近本次体验的答案即可。',
@@ -680,7 +680,7 @@
     } else if (index === 2) {
       visual = `<div class="visual-scene visual-search-scene">
         ${appRail}${orderNav(false)}
-        <div class="shot-search-main"><div class="shot-search-tools"><div class="mini-search${route === 'B' ? ' target-box' : ''}"><span aria-hidden="true">⌕</span>${esc(route === 'B' ? t('visualSameOrder') : 'Search')}${route === 'B' ? marker(1) : ''}</div><b>Export</b><b>Filter</b></div><div class="shot-table-head"><b>Order Code</b><b>Order ID</b><b>Status</b></div><div class="mini-result target-box"><span class="row-check"></span><b>${esc(route === 'B' ? 'Same order' : t('visualChooseOrder'))}</b><span class="row-status">In Progress</span>${marker(route === 'B' ? 2 : 1)}</div><div class="mini-row-faint"></div></div>
+        <div class="shot-search-main"><div class="shot-search-tools"><div class="mini-search${route === 'B' ? ' target-box' : ''}"><span aria-hidden="true">⌕</span>${esc(route === 'B' ? 'Order ID: TSE-2617' : 'Search')}${route === 'B' ? marker(1) : ''}</div><b>Export</b><b>Filter</b></div><div class="shot-table-head"><b>Order Code</b><b>Order ID</b><b>Status</b></div><div class="mini-result target-box"><span class="row-check"></span><b>${esc('TSE-2617')}</b><span class="row-status">In Progress</span>${marker(route === 'B' ? 2 : 1)}</div><div class="mini-row-faint"></div></div>
       </div>`;
     } else {
       visual = `<div class="visual-scene visual-workorder-scene">
