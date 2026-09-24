@@ -208,7 +208,7 @@
       guideLabel: '页面位置示意', guideCaption: '蓝色线框表示需要点击的位置', guideCaptionScroll: '向下滚动后，蓝色线框表示需要查看的位置', visualLogin: '登录', visualWorkspace: '进入工作空间', visualOrderList: '订单列表', visualChooseOrder: '任选一个订单', visualSameOrder: '搜索同一订单', visualWorkOrder: '工作单', visualClick: '点击', visualScroll: '向下滚动', actionLabel: '请完成', required: '必做', stepOptional: '选做',
       steps: [
         { title: '登录并进入工作空间', action: '登录 → 打开“{flowspace}”', body: '等待工作空间页面显示完成后再继续。', bullets: ['完成 4 个操作前，请保持当前线路页面打开。'] },
-        { title: '打开默认订单列表', action: '进入“Order List” → 点击“Default View”', body: '看到订单列表后继续下一步。', bullets: ['请不要反复刷新页面。'] },
+        { title: '打开默认订单列表', action: '进入订单列表 → 点击默认视图', body: '看到订单列表后继续下一步。', bullets: ['请不要反复刷新页面。'] },
         { title: '打开并记住一个订单', titleB: '打开与线路 A 相同的订单', action: '任选一个订单 → 记住订单编号 → 打开详情', actionB: '搜索线路 A 的同一订单 → 打开详情', body: '请记住这个订单，线路 B 还需要再次打开。', bodyB: '请打开在线路 A 中使用的同一个订单。', bullets: ['如有需要，可以记一下订单号。'], bulletsB: ['等待订单主要信息显示完成。'] },
         { title: '查看工作单区域', action: '在订单详情页向下滚动 → 查看“Work orders”区域', body: '这一步为选做；如果没有该区域或没有工作单，请在下方选择“未尝试”。', bullets: ['无需打开或操作工作单。'] }
       ],
