@@ -91,6 +91,7 @@
       routeSafety: 'Test Route A first, then Route B. Keep the same device and network, and do not open both routes at the same time.',
       guideLabel: 'Screen hint',
       guideCaption: 'The blue outline shows where to click',
+      guideCaptionScroll: 'The blue outline shows where to look after scrolling',
       visualLogin: 'Log in',
       visualWorkspace: 'Open workspace',
       visualOrderList: 'Order list',
@@ -98,6 +99,7 @@
       visualSameOrder: 'Search the same order',
       visualWorkOrder: 'Work order',
       visualClick: 'Click',
+      visualScroll: 'Scroll',
       actionLabel: 'Do this',
       required: 'Required',
       stepOptional: 'Optional',
@@ -109,15 +111,15 @@
           bullets: ['Keep this route tab open until all four actions are complete.']
         },
         {
-          title: 'Open the order list',
-          action: 'Click “Orders” → wait for the list',
+          title: 'Open the default order list',
+          action: 'Open “Order List” → choose “Default View”',
           body: 'Continue when the order rows are visible.',
           bullets: ['Please do not repeatedly refresh the page.']
         },
         {
-          title: 'Open any order',
+          title: 'Open and remember one order',
           titleB: 'Open the same order',
-          action: 'Choose any order → open it',
+          action: 'Choose any order → remember its order number → open it',
           actionB: 'Search for the same order from Route A → open it',
           body: 'Remember this order; you will open it again on Route B.',
           bodyB: 'Open the exact same order you used on Route A.',
@@ -125,10 +127,10 @@
           bulletsB: ['Wait until the main order information is visible.']
         },
         {
-          title: 'Open one work order',
-          action: 'Open any work order → view only',
-          body: 'This step is optional. If no work order is available, choose “Not attempted” below.',
-          bullets: ['Do not save, submit, approve, delete or send email.']
+          title: 'View the work order section',
+          action: 'On the order detail page, scroll down → view “Work orders”',
+          body: 'This step is optional. If the section or a work order is not available, choose “Not attempted” below.',
+          bullets: ['You do not need to open or operate a work order.']
         }
       ],
       ratingsTitle: 'How did each action feel?',
@@ -140,6 +142,7 @@
       compareTitle: 'Which route felt better?',
       compareIntro: 'Use your overall impression. You do not need to calculate or remember exact seconds.',
       routeSummary: '{route} ratings',
+      summaryReviewHint: 'Review only — no action needed',
       notRated: 'Not rated',
       fasterTitle: 'Overall, which route was faster?',
       fasterOptions: ['Route A', 'Route B', 'About the same', 'Not sure'],
@@ -163,7 +166,7 @@
       successBody: 'Your route comparison has been recorded. You can now close this page.',
       previewSuccessTitle: 'Thank you — you are done',
       previewSuccessBody: 'Your test is complete. You can now close this page.',
-      restart: 'Start a new test',
+      restart: 'Test again',
       downloadAgain: 'Download again',
       submitError: 'We could not confirm that your feedback was saved. Please keep this page open and try again or contact the test coordinator.'
     },
@@ -202,18 +205,18 @@
       start: '开始测试线路 A', routeTitle: '测试{route}', routeIntro: '只打开一次{route}，在新标签页连续完成 4 个动作，再返回这里统一评价。',
       openRoute: '打开{route}', opensNew: '将在新标签页打开', flowspace: '工作空间', order: '测试订单', notConfigured: '待确认',
       routeSafetyTitle: '一个小提醒', routeSafety: '请先测试线路 A，再测试线路 B；两次测试保持同一设备和网络，并且不要同时打开两条线路。',
-      guideLabel: '页面位置示意', guideCaption: '蓝色线框表示需要点击的位置', visualLogin: '登录', visualWorkspace: '进入工作空间', visualOrderList: '订单列表', visualChooseOrder: '任选一个订单', visualSameOrder: '搜索同一订单', visualWorkOrder: '工作单', visualClick: '点击', actionLabel: '请完成', required: '必做', stepOptional: '选做',
+      guideLabel: '页面位置示意', guideCaption: '蓝色线框表示需要点击的位置', guideCaptionScroll: '向下滚动后，蓝色线框表示需要查看的位置', visualLogin: '登录', visualWorkspace: '进入工作空间', visualOrderList: '订单列表', visualChooseOrder: '任选一个订单', visualSameOrder: '搜索同一订单', visualWorkOrder: '工作单', visualClick: '点击', visualScroll: '向下滚动', actionLabel: '请完成', required: '必做', stepOptional: '选做',
       steps: [
         { title: '登录并进入工作空间', action: '登录 → 打开“{flowspace}”', body: '等待工作空间页面显示完成后再继续。', bullets: ['完成 4 个操作前，请保持当前线路页面打开。'] },
-        { title: '打开订单列表', action: '点击“订单” → 等待列表出现', body: '看到订单列表后继续下一步。', bullets: ['请不要反复刷新页面。'] },
-        { title: '打开任一订单', titleB: '打开与线路 A 相同的订单', action: '任选一个订单 → 打开详情', actionB: '搜索线路 A 的同一订单 → 打开详情', body: '请记住这个订单，线路 B 还需要再次打开。', bodyB: '请打开在线路 A 中使用的同一个订单。', bullets: ['如有需要，可以记一下订单号。'], bulletsB: ['等待订单主要信息显示完成。'] },
-        { title: '打开一个工作单', action: '打开任意工作单 → 仅查看', body: '这一步为选做；如果没有工作单，请在下方选择“未尝试”。', bullets: ['不要保存、提交、审批、删除或发送邮件。'] }
+        { title: '打开默认订单列表', action: '进入“Order List” → 点击“Default View”', body: '看到订单列表后继续下一步。', bullets: ['请不要反复刷新页面。'] },
+        { title: '打开并记住一个订单', titleB: '打开与线路 A 相同的订单', action: '任选一个订单 → 记住订单编号 → 打开详情', actionB: '搜索线路 A 的同一订单 → 打开详情', body: '请记住这个订单，线路 B 还需要再次打开。', bodyB: '请打开在线路 A 中使用的同一个订单。', bullets: ['如有需要，可以记一下订单号。'], bulletsB: ['等待订单主要信息显示完成。'] },
+        { title: '查看工作单区域', action: '在订单详情页向下滚动 → 查看“Work orders”区域', body: '这一步为选做；如果没有该区域或没有工作单，请在下方选择“未尝试”。', bullets: ['无需打开或操作工作单。'] }
       ],
       ratingsTitle: '这 4 个操作感觉如何？', ratingsIntro: '选择最接近本次体验的答案即可。',
       ratingNames: ['流畅', '稍有等待', '明显较慢但已完成', '无法完成', '未尝试'],
       continueB: '下一步：线路 B', continueCompare: '对比两条线路', back: '返回',
       compareTitle: '哪条线路体验更好？', compareIntro: '根据整体感受回答即可，不需要计算或回忆具体秒数。',
-      routeSummary: '{route}评价', notRated: '未评价', fasterTitle: '整体来看，哪条线路更快？', fasterOptions: ['线路 A', '线路 B', '差不多', '不确定'],
+      routeSummary: '{route}评价', summaryReviewHint: '以下仅为已填写结果，无需再次选择', notRated: '未评价', fasterTitle: '整体来看，哪条线路更快？', fasterOptions: ['线路 A', '线路 B', '差不多', '不确定'],
       differencesTitle: '哪些页面的速度有明显差异？', differenceOptions: ['登录 / 工作空间', '订单列表', '订单详情', '工作单', '没有明显差异'],
       problemRouteTitle: '哪条线路遇到了问题？', problemRouteOptions: ['线路 A', '线路 B', '两条线路都有', '两条线路都没有'],
       problemTypeTitle: '遇到了什么问题？', problemTypeOptions: ['页面打开较慢', '长时间加载中', '页面无法打开', '断开连接 / 错误提示', '其他'],
@@ -224,7 +227,7 @@
       validation: '请先完成标记的问题再继续。', clearConfirm: '确定清除所有已保存答案并重新开始吗？',
       successTitle: '感谢反馈，提交成功', successBody: '你的线路对比结果已记录，现在可以关闭此页面。',
       previewSuccessTitle: '感谢帮助，测试完成', previewSuccessBody: '你已经完成本次测试，现在可以关闭这个页面。',
-      restart: '开始新的测试', downloadAgain: '再次下载',
+      restart: '重新测试', downloadAgain: '再次下载',
       submitError: '暂时无法确认反馈是否保存成功。请保留当前页面，稍后重试或联系测试负责人。'
     }
   };
@@ -683,11 +686,12 @@
       visual = `<div class="visual-scene visual-workorder-scene">
         ${appRail}
         <div class="shot-detail-nav"><b>Order detail</b><span class="is-selected">Overview</span><span>Milestones</span><span>Documents</span><span>Activity</span></div>
-        <div class="shot-detail-main"><div class="shot-detail-title"><b>Order</b><span>In Progress</span></div><div class="detail-tabs"><span class="active">Overview</span><span>Timeline</span><span>Files</span></div><div class="detail-summary"><i></i><i></i><i></i></div><small>Work orders</small><div class="workorder-card target-box"><span class="workorder-icon">✓</span><b>${esc(t('visualWorkOrder'))}</b><span aria-hidden="true">›</span>${marker(1)}</div></div>
+        <div class="shot-detail-main"><div class="shot-detail-title"><b>Order</b><span>In Progress</span></div><div class="detail-tabs"><span class="active">Overview</span><span>Timeline</span><span>Files</span></div><div class="detail-summary"><i></i><i></i><i></i></div><div class="scroll-cue" aria-hidden="true">↓</div><div class="workorder-section target-box"><small>Work orders</small><div class="workorder-card"><span class="workorder-icon">✓</span><b>${esc(t('visualWorkOrder'))}</b><span>${state.language === 'zh' ? '可见' : 'Visible'}</span></div></div></div>
       </div>`;
     }
 
-    return `<div class="visual-wrap"><div class="guide-visual" role="img" aria-label="${esc(t('guideCaption'))}"><div class="visual-browser-bar"><span></span><span></span><span></span><b>${esc(t('visualClick'))}</b></div>${visual}</div><div class="visual-caption">${esc(t('guideCaption'))}</div></div>`;
+    const visualInstruction = index === 3 ? t('guideCaptionScroll') : t('guideCaption');
+    return `<div class="visual-wrap"><div class="guide-visual" role="img" aria-label="${esc(visualInstruction)}"><div class="visual-browser-bar"><span></span><span></span><span></span><b>${esc(index === 3 ? t('visualScroll') : t('visualClick'))}</b></div>${visual}</div><div class="visual-caption">${esc(visualInstruction)}</div></div>`;
   }
 
   function renderRatingRow(route, title, index, value) {
@@ -723,7 +727,8 @@
 
   function renderSummary(route) {
     const values = state.routes[route].ratings;
-    return `<article class="summary-card"><h3>${esc(interpolate(t('routeSummary'), { route: routeName(route) }))}</h3><p>${esc(cfg.routes?.[route] || '')}</p><div class="summary-score">${values.map((value, index) => `<span class="score-pill">${index + 1}: ${value ? esc(t('ratingNames')[Number(value) - 1]) : esc(t('notRated'))}</span>`).join('')}</div></article>`;
+    const steps = t('steps');
+    return `<article class="summary-card"><h3>${esc(interpolate(t('routeSummary'), { route: routeName(route) }))}</h3><p>${esc(cfg.routes?.[route] || '')}</p><p class="summary-readonly">${esc(t('summaryReviewHint'))}</p><div class="summary-score">${values.map((value, index) => `<div class="summary-rating"><span class="summary-rating-index">${index + 1}</span><span>${esc(stepTitle(steps[index], route))}</span><strong>${value ? esc(t('ratingNames')[Number(value) - 1]) : esc(t('notRated'))}</strong></div>`).join('')}</div></article>`;
   }
 
   function radioQuestion(name, title, options, selected, values = options) {
@@ -820,7 +825,7 @@
   function renderSuccess() {
     const preview = state.previewComplete && !state.completed;
     el.setupWarning.hidden = true;
-    el.content.innerHTML = `<section class="success-view"><span class="success-icon">✓</span><h1>${esc(preview ? t('previewSuccessTitle') : t('successTitle'))}</h1><p>${esc(preview ? t('previewSuccessBody') : t('successBody'))}</p>${REVIEW_MODE ? `<div class="success-actions">${preview ? `<button class="secondary-button" type="button" data-download>${esc(t('downloadAgain'))}</button>` : ''}<button class="primary-button" type="button" data-restart>${esc(t('restart'))}</button></div>` : ''}</section>`;
+    el.content.innerHTML = `<section class="success-view"><span class="success-icon">✓</span><h1>${esc(preview ? t('previewSuccessTitle') : t('successTitle'))}</h1><p>${esc(preview ? t('previewSuccessBody') : t('successBody'))}</p><div class="success-actions">${REVIEW_MODE && preview ? `<button class="secondary-button" type="button" data-download>${esc(t('downloadAgain'))}</button>` : ''}<button class="primary-button" type="button" data-restart>${esc(t('restart'))}</button></div></section>`;
     el.actions.innerHTML = '';
     const download = el.content.querySelector('[data-download]');
     if (download) download.addEventListener('click', () => downloadPayload(buildPayload()));
